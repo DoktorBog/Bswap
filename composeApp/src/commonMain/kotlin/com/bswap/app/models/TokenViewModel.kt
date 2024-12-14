@@ -6,6 +6,8 @@ import com.bswap.app.baseUrl
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,10 +23,15 @@ class TokenViewModel(
     val isLoading: StateFlow<Boolean> = _isLoading
 
     init {
-        fetchTokens()
+        viewModelScope.launch {
+            while (true) {
+                fetchTokens()
+                delay(30_000)
+            }
+        }
     }
 
-    fun fetchTokens() = viewModelScope.launch {
+    fun fetchTokens() = viewModelScope.launch(Dispatchers.Default) {
         _isLoading.value = true
         runCatching {
             val response: List<TokenProfile> = client.get("$baseUrl/api/tokens").body()

@@ -1,10 +1,11 @@
 package com.bswap.server.routes
 
-import com.bswap.server.data.dexscreener.TokenInfoService
+import com.bswap.server.data.dexscreener.models.TokenProfile
 import io.ktor.http.ContentType
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import kotlinx.coroutines.flow.Flow
 import kotlinx.html.a
 import kotlinx.html.body
 import kotlinx.html.h1
@@ -21,9 +22,9 @@ import kotlinx.html.thead
 import kotlinx.html.tr
 import kotlinx.html.unsafe
 
-fun Route.tokensRoute(tokenInfoService: TokenInfoService) {
+fun Route.tokensRoute(tokenProfiles: Flow<List<TokenProfile>>) {
     get("/tokens") {
-        tokenInfoService.tokenProfiles.collect { tokens ->
+        tokenProfiles.collect { tokens ->
             call.respondText(
                 createHTML().html {
                     head {

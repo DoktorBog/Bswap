@@ -1,20 +1,21 @@
 package com.bswap.server
 
 import com.bswap.server.data.SERVER_PORT
-import com.bswap.server.data.solana.pool.PoolMonitorService
-import com.bswap.server.data.dexscreener.TokenInfoService
+import com.bswap.server.data.dexscreener.DexScreenerClientImpl
+import com.bswap.server.data.dexscreener.DexScreenerRepository
 import com.bswap.server.routes.apiRoute
-import com.bswap.server.routes.newPullsRoute
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
-import io.ktor.server.routing.*
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
+import io.ktor.server.routing.routing
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -24,18 +25,15 @@ fun main() {
             json(Json { ignoreUnknownKeys = true })
         }
     }
-    val poolMonitorService = PoolMonitorService(client)
-    val tokenInfoService = TokenInfoService(client)
+    val dexScreenerRepository = DexScreenerRepository(DexScreenerClientImpl(client))
 
-    GlobalScope.launch { poolMonitorService.monitorPools() }
-    GlobalScope.launch { tokenInfoService.monitorTokenProfiles() }
+    GlobalScope.launch { dexScreenerRepository.startAutoRefreshAll() }
 
     embeddedServer(Netty, port = SERVER_PORT) {
         routing {
             startRoute()
-            newPullsRoute(poolMonitorService)
-            tokensRoute(tokenInfoService)
-            apiRoute(tokenInfoService)
+            tokensRoute(dexScreenerRepository.tokenProfilesFlow)
+            apiRoute(dexScreenerRepository.tokenProfilesFlow)
         }
     }.start(wait = true)
 }
