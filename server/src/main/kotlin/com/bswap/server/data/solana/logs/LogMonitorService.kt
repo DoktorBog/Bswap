@@ -36,9 +36,9 @@ class LogMonitorService(private val client: HttpClient) {
                     parseLog(log)?.let { event ->
                         when (event) {
                             is Certificate -> {
-                                //synchronized(newCertificates) {
-                                //    newCertificates.add(event)
-                                //}
+                               synchronized(newCertificates) {
+                                   newCertificates.add(event)
+                               }
                                 logger.info("New certificate detected: ID=${event.id}, Owner=${event.owner}")
                             }
                             is LogPool -> {

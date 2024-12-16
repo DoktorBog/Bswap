@@ -27,7 +27,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 @Preview
 fun App() {
-    val viewModel: TokenViewModel = viewModel { TokenViewModel(networkClient()) }
+    val client = networkClient()
+    val viewModel: TokenViewModel = viewModel { TokenViewModel(client) }
     val tokens by viewModel.tokens.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val pullRefreshState = rememberPullRefreshState(
