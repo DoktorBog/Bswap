@@ -15,6 +15,7 @@ import foundation.metaplex.rpc.TransactionSignature
 import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.serialization.KSerializer
 
+
 interface RpcInterface {
 
     suspend fun <T> getAccountInfo(
