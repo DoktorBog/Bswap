@@ -1,12 +1,12 @@
 package com.bswap.server.data.solana.transaction
 
-import com.bswap.server.RPC_URL
 import com.bswap.server.data.formatLamports
 import com.metaplex.signer.Signer
 import foundation.metaplex.base58.decodeBase58
 import foundation.metaplex.base58.encodeToBase58String
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.RpcSendTransactionConfiguration
+import foundation.metaplex.rpc.SerializedTransaction
 import foundation.metaplex.rpc.TransactionSignature
 import foundation.metaplex.solana.programs.SystemProgram.transfer
 import foundation.metaplex.solana.transactions.SolanaTransactionBuilder
@@ -14,7 +14,6 @@ import foundation.metaplex.solana.transactions.Transaction
 import foundation.metaplex.solanaeddsa.Keypair
 import foundation.metaplex.solanaeddsa.SolanaEddsa
 import foundation.metaplex.solanapublickeys.PublicKey
-import org.sol4k.Connection
 import org.sol4k.VersionedTransaction
 import java.math.BigDecimal
 
@@ -37,27 +36,19 @@ class HotSigner(private val keyPair: Keypair) : Signer {
         SolanaEddsa.sign(message, keyPair)
 }
 
-//TODO: refactoring
-suspend fun executeAndConfirmTransaction(
+suspend fun executeSwapTransaction(
+    rpc: RPC,
     base64: String,
+    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
 ) {
-    val swapConnection = Connection(RPC_URL)
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
     val sender = org.sol4k.Keypair.fromSecretKey(k.secretKey)
-    swapConnection.getLatestBlockhash()
     val transaction = VersionedTransaction.from(base64)
-    println("Executing swap transaction...")
     transaction.sign(sender)
-    runCatching {
-        val signature = swapConnection.sendTransaction(transaction)
-        println("Transaction swap succeeded $signature")
-    }.onFailure {
-        println("Transaction swap failed $it")
-    }
+    transactionExecutor.executeAndConfirm(transaction.serialize())
 }
 
-//TODO: refactoring to sol4k
-suspend fun executeAndConfirmTransaction(
+suspend fun executeSolTransaction(
     rpc: RPC,
     amount: BigDecimal,
     transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
@@ -80,7 +71,6 @@ suspend fun executeAndConfirmTransaction(
     transactionExecutor.executeAndConfirm(transaction)
 }
 
-//TODO: refactoring to sol4k
 class DefaultTransactionExecutor(
     private val rpc: RPC
 ) {
@@ -100,6 +90,35 @@ class DefaultTransactionExecutor(
             println("Transaction failed Exception $e")
             TransactionExecutionResult(false, null)
         }
+    }
+
+    suspend fun executeAndConfirm(
+        transaction: SerializedTransaction,
+    ): TransactionExecutionResult {
+        println("Executing transaction...")
+
+        return try {
+            val signature = execute(transaction)
+            val signString = signature.encodeToBase58String()
+            println("Transaction signature: $signString")
+            println("Confirming transaction...")
+            confirm(signature)
+        } catch (e: Exception) {
+            println("Transaction failed Exception $e")
+            TransactionExecutionResult(false, null)
+        }
+    }
+
+    private suspend fun execute(
+        transaction: SerializedTransaction,
+    ): TransactionSignature {
+        return rpc.sendTransaction(
+            transaction,
+            RpcSendTransactionConfiguration(
+                skipPreflight = false,
+                maxRetries = 5u
+            )
+        )
     }
 
     private suspend fun execute(

@@ -4,7 +4,8 @@ import com.bswap.server.data.SERVER_PORT
 import com.bswap.server.data.dexscreener.DexScreenerClientImpl
 import com.bswap.server.data.dexscreener.DexScreenerRepository
 import com.bswap.server.data.solana.jupiter.JupiterSwapService
-import com.bswap.server.data.solana.transaction.executeAndConfirmTransaction
+import com.bswap.server.data.solana.transaction.executeSolTransaction
+import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.routes.apiRoute
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
@@ -33,8 +34,13 @@ fun main() {
 
     GlobalScope.launch {
         dexScreenerRepository.startAutoRefreshAll()
-        executeAndConfirmTransaction(jupiterSwapService.getQuoteAndPerformSwap().swapTransaction)
-        executeAndConfirmTransaction(rpc = rpc, amount = BigDecimal.valueOf(0.001))
+        executeSwapTransaction(
+            rpc, jupiterSwapService.getQuoteAndPerformSwap(
+                inputMint = "So11111111111111111111111111111111111111112", //SOL
+                outputMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" //USD
+            ).swapTransaction
+        )
+        executeSolTransaction(rpc = rpc, amount = BigDecimal.valueOf(0.001))
     }
 
 
