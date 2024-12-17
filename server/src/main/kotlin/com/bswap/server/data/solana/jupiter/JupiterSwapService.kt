@@ -61,17 +61,14 @@ class JupiterSwapService(
     }
 
     suspend fun getQuoteAndPerformSwap(
+        amount: BigDecimal,
         inputMint: String,
-        outputMint: String
+        outputMint: String,
+        slippageBps: Int = 100,
     ): SwapResponse {
         val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
         val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
-        val response = getQuote(
-            inputMint,
-            outputMint,
-            BigDecimal.valueOf(0.001).formatLamports(),
-            100,
-        )
+        val response = getQuote(inputMint, outputMint, amount.formatLamports(), slippageBps)
         return performSwap(response, signer.publicKey.bytes.encodeToBase58String())
     }
 }

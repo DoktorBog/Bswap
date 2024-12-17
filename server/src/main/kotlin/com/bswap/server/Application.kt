@@ -36,6 +36,7 @@ fun main() {
         dexScreenerRepository.startAutoRefreshAll()
         executeSwapTransaction(
             rpc, jupiterSwapService.getQuoteAndPerformSwap(
+                amount = BigDecimal.valueOf(0.001),
                 inputMint = "So11111111111111111111111111111111111111112", //SOL
                 outputMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" //USD
             ).swapTransaction
