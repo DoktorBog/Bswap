@@ -1,4 +1,4 @@
-package com.bswap.server.data.solana.logs
+package com.bswap.server.data.solana.search.logs
 
 import io.ktor.client.*
 import io.ktor.client.call.body

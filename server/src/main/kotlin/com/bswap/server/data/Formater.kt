@@ -1,5 +1,6 @@
 package com.bswap.server.data
 
+import com.bswap.server.LAMPORTS_PER_SOL
 import java.math.BigDecimal
 
 fun Long.formatLamports(): BigDecimal =

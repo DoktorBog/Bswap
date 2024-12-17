@@ -1,8 +1,8 @@
-package com.bswap.server.data.solana.jupiter
+package com.bswap.server.data.solana.swap.jupiter
 
 import com.bswap.server.data.formatLamports
-import com.bswap.server.data.solana.jupiter.models.QuoteResponse
-import com.bswap.server.data.solana.jupiter.models.SwapResponse
+import com.bswap.server.data.solana.swap.jupiter.models.QuoteResponse
+import com.bswap.server.data.solana.swap.jupiter.models.SwapResponse
 import com.bswap.server.data.solana.transaction.HotSigner
 import com.bswap.server.data.solana.transaction.SolanaKeypair
 import com.bswap.server.data.solana.transaction.privateKey

@@ -1,9 +1,8 @@
 package com.bswap.server
 
-import com.bswap.server.data.SERVER_PORT
 import com.bswap.server.data.dexscreener.DexScreenerClientImpl
 import com.bswap.server.data.dexscreener.DexScreenerRepository
-import com.bswap.server.data.solana.jupiter.JupiterSwapService
+import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
 import com.bswap.server.data.solana.transaction.executeSolTransaction
 import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.routes.apiRoute
@@ -64,4 +63,3 @@ private fun createClient() = HttpClient(CIO) {
 private fun createRPC(client: HttpClient) =
     RPC(RPC_URL, NetworkDriver(client))
 
-const val RPC_URL = "https://api.mainnet-beta.solana.com"

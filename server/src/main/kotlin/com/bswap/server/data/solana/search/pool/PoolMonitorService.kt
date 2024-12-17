@@ -1,7 +1,7 @@
-package com.bswap.server.data.solana.pool
+package com.bswap.server.data.solana.search.pool
 
-import com.bswap.server.data.solana.pool.model.Pool
-import com.bswap.server.data.solana.pool.model.PoolResponse
+import com.bswap.server.data.solana.search.pool.model.Pool
+import com.bswap.server.data.solana.search.pool.model.PoolResponse
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get

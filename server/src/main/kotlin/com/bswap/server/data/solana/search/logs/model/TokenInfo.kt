@@ -1,4 +1,4 @@
-package com.bswap.server.data.solana.logs.model
+package com.bswap.server.data.solana.search.logs.model
 
 import kotlinx.serialization.Serializable
 

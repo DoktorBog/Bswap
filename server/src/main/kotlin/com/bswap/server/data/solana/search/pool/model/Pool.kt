@@ -1,6 +1,6 @@
-package com.bswap.server.data.solana.pool.model
+package com.bswap.server.data.solana.search.pool.model
 
-import com.bswap.server.data.solana.logs.model.TokenInfo
+import com.bswap.server.data.solana.search.logs.model.TokenInfo
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -1,4 +1,4 @@
-package com.bswap.server.data.solana.jupiter.models
+package com.bswap.server.data.solana.swap.jupiter.models
 
 import kotlinx.serialization.Serializable
 
