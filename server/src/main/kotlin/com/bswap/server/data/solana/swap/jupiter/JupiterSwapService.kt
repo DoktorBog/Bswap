@@ -1,5 +1,6 @@
 package com.bswap.server.data.solana.swap.jupiter
 
+import com.bswap.server.JUPITER_API_URL
 import com.bswap.server.data.formatLamports
 import com.bswap.server.data.solana.swap.jupiter.models.QuoteResponse
 import com.bswap.server.data.solana.swap.jupiter.models.SwapResponse
@@ -23,22 +24,21 @@ import java.math.BigDecimal
 
 class JupiterSwapService(
     private val client: HttpClient,
-    private val jupiterApiUrl: String = "https://quote-api.jup.ag/v6"
+    private val jupiterApiUrl: String = JUPITER_API_URL
 ) {
-
+    val json = Json { ignoreUnknownKeys = true }
     private suspend fun getQuote(
         inputMint: String,
         outputMint: String,
         amount: Long,
-        slippageBps: Int
     ): QuoteResponse {
         val response: HttpResponse = client.get("$jupiterApiUrl/quote") {
             parameter("inputMint", inputMint)
             parameter("outputMint", outputMint)
             parameter("amount", amount)
-            parameter("slippageBps", slippageBps)
+            parameter("autoSlippage", true)
         }
-        return Json.decodeFromString(QuoteResponse.serializer(), response.bodyAsText())
+        return json.decodeFromString(QuoteResponse.serializer(), response.bodyAsText())
     }
 
     private suspend fun performSwap(
@@ -57,18 +57,28 @@ class JupiterSwapService(
                 """.trimIndent()
             )
         }
-        return Json.decodeFromString(SwapResponse.serializer(), response.bodyAsText())
+        return json.decodeFromString(SwapResponse.serializer(), response.bodyAsText())
     }
 
     suspend fun getQuoteAndPerformSwap(
         amount: BigDecimal,
         inputMint: String,
         outputMint: String,
-        slippageBps: Int = 100,
     ): SwapResponse {
         val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
         val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
-        val response = getQuote(inputMint, outputMint, amount.formatLamports(), slippageBps)
+        val response = getQuote(inputMint, outputMint, amount.formatLamports())
+        return performSwap(response, signer.publicKey.bytes.encodeToBase58String())
+    }
+
+    suspend fun getQuoteAndPerformSwap(
+        amount: String,
+        inputMint: String,
+        outputMint: String,
+    ): SwapResponse {
+        val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
+        val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
+        val response = getQuote(inputMint, outputMint, amount.toLong())
         return performSwap(response, signer.publicKey.bytes.encodeToBase58String())
     }
 }

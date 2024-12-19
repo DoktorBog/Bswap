@@ -4,19 +4,19 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class QuoteResponse(
-    val inputMint: String,
-    val inAmount: String,
-    val outputMint: String,
-    val outAmount: String,
-    val otherAmountThreshold: String,
-    val swapMode: String,
-    val slippageBps: Int,
+    val inputMint: String? = null,
+    val inAmount: String? = null,
+    val outputMint: String? = null,
+    val outAmount: String? = null,
+    val otherAmountThreshold: String? = null,
+    val swapMode: String? = null,
+    val slippageBps: Int? = null,
     val platformFee: String? = null,
-    val priceImpactPct: String,
-    val routePlan: List<RoutePlan>,
+    val priceImpactPct: String? = null,
+    val routePlan: List<RoutePlan> = emptyList(),
     val scoreReport: String? = null,
-    val contextSlot: Long,
-    val timeTaken: Double
+    val contextSlot: Long? = null,
+    val timeTaken: Double? = null
 )
 
 @Serializable

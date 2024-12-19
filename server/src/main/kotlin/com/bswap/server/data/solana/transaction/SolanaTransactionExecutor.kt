@@ -40,12 +40,12 @@ suspend fun executeSwapTransaction(
     rpc: RPC,
     base64: String,
     transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
-) {
+): Boolean {
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
     val sender = org.sol4k.Keypair.fromSecretKey(k.secretKey)
     val transaction = VersionedTransaction.from(base64)
     transaction.sign(sender)
-    transactionExecutor.executeAndConfirm(transaction.serialize())
+    return transactionExecutor.executeAndConfirm(transaction.serialize()).confirmed
 }
 
 suspend fun executeSolTransaction(
@@ -115,8 +115,8 @@ class DefaultTransactionExecutor(
         return rpc.sendTransaction(
             transaction,
             RpcSendTransactionConfiguration(
-                skipPreflight = false,
-                maxRetries = 5u
+                skipPreflight = true,
+                maxRetries = 3u
             )
         )
     }
@@ -128,8 +128,8 @@ class DefaultTransactionExecutor(
         return rpc.sendTransaction(
             serializedTransaction,
             RpcSendTransactionConfiguration(
-                skipPreflight = false,
-                maxRetries = UInt.MIN_VALUE.inc().inc() //2
+                skipPreflight = true,
+                maxRetries = 3u
             )
         )
     }
