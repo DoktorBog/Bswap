@@ -9,7 +9,7 @@
 
 It integrates with:
 - **[JupiterSwapService](https://jup.ag/)** for swap quotes and transactions.
-- **[RugCheck](https://api.rugcheck.xyz/)** to detect potential scams.
+- Not implemented!! **[RugCheck](https://api.rugcheck.xyz/)** to detect potential scams.
 - **OkHttp** for HTTP requests.
 - **Metaplex RPC** for executing on-chain transactions in Solana.
 
