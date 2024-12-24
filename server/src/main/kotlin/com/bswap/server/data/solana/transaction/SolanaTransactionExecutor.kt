@@ -11,6 +11,7 @@ import foundation.metaplex.rpc.TransactionSignature
 import foundation.metaplex.solana.programs.SystemProgram.transfer
 import foundation.metaplex.solana.transactions.SolanaTransactionBuilder
 import foundation.metaplex.solana.transactions.Transaction
+import foundation.metaplex.solana.transactions.TransactionInstruction
 import foundation.metaplex.solanaeddsa.Keypair
 import foundation.metaplex.solanaeddsa.SolanaEddsa
 import foundation.metaplex.solanapublickeys.PublicKey
@@ -46,6 +47,23 @@ suspend fun executeSwapTransaction(
     val transaction = VersionedTransaction.from(base64)
     transaction.sign(sender)
     return transactionExecutor.executeAndConfirm(transaction.serialize()).confirmed
+}
+
+suspend fun executeSolTransaction(
+    rpc: RPC,
+    transactionInstruction: TransactionInstruction,
+    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
+) {
+
+    val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
+    val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
+    val latestBlockhash = rpc.getLatestBlockhash(null)
+    val transaction: Transaction = SolanaTransactionBuilder()
+        .addInstruction(transactionInstruction)
+        .setRecentBlockHash(latestBlockhash.blockhash)
+        .setSigners(listOf(signer))
+        .build()
+    transactionExecutor.executeAndConfirm(transaction)
 }
 
 suspend fun executeSolTransaction(

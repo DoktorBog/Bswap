@@ -7,6 +7,9 @@ import com.solana.publickey.SolanaPublicKey
 import com.solana.rpccore.JsonRpc20Request
 import com.solana.rpccore.get
 import foundation.metaplex.rpc.serializers.SolanaResponseSerializer
+import foundation.metaplex.solana.transactions.AccountMeta
+import foundation.metaplex.solana.transactions.TransactionInstruction
+import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -18,6 +21,30 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 import kotlin.random.Random
 import kotlin.random.nextUInt
+
+fun createCloseAccountInstruction(
+    tokenAccount: PublicKey,
+    destination: PublicKey,
+    owner: PublicKey
+): TransactionInstruction {
+    val programId = PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+
+    // Порядок accounts очень важен
+    val accounts = listOf(
+        AccountMeta(tokenAccount, isSigner = false, isWritable = true),
+        AccountMeta(destination, isSigner = false, isWritable = true),
+        AccountMeta(owner, isSigner = true, isWritable = false),
+    )
+
+    // Data = один байт = 9 (CloseAccount)
+    val data = byteArrayOf(9)
+
+    return TransactionInstruction(
+        programId = SolanaPublicKey(programId.base58().encodeToByteArray()),
+        keys = accounts,
+        data = data
+    )
+}
 
 suspend fun getTokenAccountsByOwner(
     httpNetworkDriver: HttpNetworkDriver,
@@ -52,6 +79,38 @@ suspend fun getTokenAccountsByOwner(
         SolanaResponseSerializer(ListSerializer(TokenAccount.serializer()))
     ).getOrThrow()
 }
+
+
+//suspend fun closeMultipleTokenAccounts(
+//    rpc: RPC,
+//    transactionExecutor: DefaultTransactionExecutor,
+//    accountsToClose: List<String>,
+//    destinationPubkey: String,
+//    ownerPubkey: String
+//): Boolean {
+//    val owner = PublicKey(ownerPubkey)
+//    val destination = PublicKey(destinationPubkey)
+//
+//    val builder = TransactionBuilder()
+//    for (accountPubkey in accountsToClose) {
+//        val account = PublicKey(accountPubkey)
+//        val closeInstruction = TokenProgram.closeAccountInstruction(
+//            account = account,
+//            destination = destination,
+//            owner = owner
+//        )
+//        builder.addInstruction(closeInstruction)
+//    }
+//
+//    val transaction = builder.build()
+//    val transactionId = transactionExecutor.signAndSendTransaction(transaction, listOf(owner))
+//
+//    val statusResult = rpc.getSignatureStatuses(listOf(transactionId)).result
+//    val firstStatus = statusResult.value?.firstOrNull()
+//    val confirmationStatus = firstStatus?.confirmationStatus
+//
+//    return (confirmationStatus == "finalized" || confirmationStatus == "confirmed")
+//}
 
 @Serializable
 data class TokenAccount(
