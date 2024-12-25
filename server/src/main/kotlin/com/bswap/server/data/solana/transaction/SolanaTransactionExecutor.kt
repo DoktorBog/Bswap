@@ -68,6 +68,26 @@ suspend fun executeSolTransaction(
 
 suspend fun executeSolTransaction(
     rpc: RPC,
+    transactionInstruction: List<TransactionInstruction>,
+    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
+) {
+
+    val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
+    val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
+    val latestBlockhash = rpc.getLatestBlockhash(null)
+    val transaction: Transaction = SolanaTransactionBuilder()
+        .apply {
+            for (instruction in transactionInstruction.take(9)) {
+                addInstruction(instruction)
+            }
+        }
+        .setRecentBlockHash(latestBlockhash.blockhash)
+        .setSigners(listOf(signer)).build()
+    transactionExecutor.executeAndConfirm(transaction)
+}
+
+suspend fun executeSolTransaction(
+    rpc: RPC,
     amount: BigDecimal,
     transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
 ) {

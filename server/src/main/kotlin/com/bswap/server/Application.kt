@@ -4,6 +4,9 @@ import com.bswap.server.data.dexscreener.DexScreenerClientImpl
 import com.bswap.server.data.dexscreener.DexScreenerRepository
 import com.bswap.server.data.solana.pumpfun.PumpFunService
 import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
+import com.bswap.server.routes.apiRoute
+import com.bswap.server.routes.startRoute
+import com.bswap.server.routes.tokensRoute
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.networking.NetworkDriver
 import io.ktor.client.HttpClient
@@ -13,6 +16,7 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.routing.routing
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -21,20 +25,20 @@ import kotlinx.serialization.json.Json
 fun main() {
     val rpc = createRPC(client)
     val jupiterSwapService = JupiterSwapService(client)
-    val bot = SolanaTokenSwapBot(rpc, jupiterSwapService)
-
-    //bot.singleTrade(tokenMint = "")
-
+    val config = SolanaSwapBotConfig(
+        rpc = rpc,
+        jupiterSwapService = jupiterSwapService,
+    )
     PumpFunService.connect()
+    val bot = SolanaTokenSwapBot(config)
     bot.observePumpFun(PumpFunService.observeEvents())
-    //bot.runDexScreenerSwap()
-
+    bot.runDexScreenerSwap(tokenProfiles = false)
     embeddedServer(Netty, port = SERVER_PORT) {
-        //routing {
-        //    startRoute()
-        //    tokensRoute(dexScreenerRepository.tokenProfilesFlow)
-        //    apiRoute(dexScreenerRepository.tokenProfilesFlow)
-        //}
+        routing {
+            startRoute()
+            tokensRoute(dexScreenerRepository.tokenProfilesFlow)
+            apiRoute(dexScreenerRepository.tokenProfilesFlow)
+        }
     }.start(wait = true)
 }
 
@@ -46,11 +50,11 @@ fun SolanaTokenSwapBot.runDexScreenerSwap(
     GlobalScope.launch {
         delay(60_000)
         if (tokenProfiles) {
-            observeTokenProfiles(dexScreenerRepository.tokenProfilesFlow)
+            observeProfiles(dexScreenerRepository.tokenProfilesFlow)
         }
         if (tokenBoostedProfiles) {
-            observeTokenBoostedProfiles(dexScreenerRepository.latestBoostedTokensFlow)
-            //observeTokenBoostedProfiles(dexScreenerRepository.topBoostedTokensFlow)
+            observeBoosted(dexScreenerRepository.latestBoostedTokensFlow)
+            observeBoosted(dexScreenerRepository.topBoostedTokensFlow)
         }
         dexScreenerRepository.startAutoRefreshAll()
     }

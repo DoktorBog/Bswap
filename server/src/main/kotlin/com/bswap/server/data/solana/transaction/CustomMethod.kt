@@ -19,30 +19,23 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
+import org.sol4k.Base58
 import kotlin.random.Random
 import kotlin.random.nextUInt
 
 fun createCloseAccountInstruction(
     tokenAccount: PublicKey,
     destination: PublicKey,
-    owner: PublicKey
 ): TransactionInstruction {
     val programId = PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-
-    // Порядок accounts очень важен
-    val accounts = listOf(
-        AccountMeta(tokenAccount, isSigner = false, isWritable = true),
-        AccountMeta(destination, isSigner = false, isWritable = true),
-        AccountMeta(owner, isSigner = true, isWritable = false),
-    )
-
-    // Data = один байт = 9 (CloseAccount)
-    val data = byteArrayOf(9)
-
     return TransactionInstruction(
-        programId = SolanaPublicKey(programId.base58().encodeToByteArray()),
-        keys = accounts,
-        data = data
+        programId = SolanaPublicKey(Base58.decode(programId.base58())),
+        keys = listOf(
+            AccountMeta(SolanaPublicKey(Base58.decode(tokenAccount.base58())), isSigner = false, isWritable = true),
+            AccountMeta(SolanaPublicKey(Base58.decode(destination.base58())), isSigner = false, isWritable = true),
+            AccountMeta(SolanaPublicKey(Base58.decode(destination.base58())), isSigner = true, isWritable = false),
+        ),
+        data = ByteArray(8) { 9.toByte() }
     )
 }
 
@@ -77,7 +70,7 @@ suspend fun getTokenAccountsByOwner(
     return rpcDriver.get(
         rpcRequest,
         SolanaResponseSerializer(ListSerializer(TokenAccount.serializer()))
-    ).getOrThrow()
+    ).getOrElse { emptyList() }
 }
 
 

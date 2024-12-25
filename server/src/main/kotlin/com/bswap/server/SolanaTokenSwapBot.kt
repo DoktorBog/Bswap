@@ -16,7 +16,6 @@ import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -24,271 +23,219 @@ import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.math.BigDecimal
+import java.util.concurrent.ConcurrentHashMap
 
-enum class TokenState { SWAPPED, SOLD }
+sealed interface TokenState {
+    data object Swapped : TokenState
+    data object Selling : TokenState
+    data object Sold : TokenState
+    data class SellFailed(val reason: String) : TokenState
+}
 
-data class TokenStatus(
-    val tokenAddress: String,
-    var state: TokenState,
+data class TokenStatus(val tokenAddress: String, var state: TokenState)
+
+data class SolanaSwapBotConfig(
+    val rpc: RPC,
+    val jupiterSwapService: JupiterSwapService,
+    val walletPublicKey: PublicKey = PublicKey(""),
+    val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
+    val solAmountToTrade: BigDecimal = BigDecimal("0.0001"),
+    val autoSellAllSpl: Boolean = true,
+    val maxKnownTokens: Int = 15,
+    val sellWaitMs: Long = 50_000,
+    val zeroBalanceCloseBatch: Int = 9,
+    val splSellBatch: Int = 10,
+    val closeAccountsIntervalMs: Long = 55_000,
+    val sellAllSplIntervalMs: Long = 10_000,
+    val clearMapIntervalMs: Long = 300_000
 )
 
 @OptIn(FlowPreview::class)
 class SolanaTokenSwapBot(
-    private val rpc: RPC,
-    private val jupiterSwapService: JupiterSwapService,
-    private val transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
-    private val walletPublicKey: PublicKey = PublicKey(""),
-    private val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
-    private val solAmountToTrade: BigDecimal = BigDecimal.valueOf(0.001),
-    private val singleTradeToken: String? = null
+    private val config: SolanaSwapBotConfig,
+    private val executor: DefaultTransactionExecutor = DefaultTransactionExecutor(config.rpc)
 ) {
-
-    private val tokenStateMap = mutableMapOf<String, TokenStatus>()
-    private val coroutineScope = CoroutineScope(SupervisorJob())
+    private val stateMap = ConcurrentHashMap<String, TokenStatus>()
+    private val lastSell = ConcurrentHashMap<String, Long>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
-        pereodicSellAllSPL(rpc, jupiterSwapService)
-        closeZeroAccountsTask()
+        if (config.autoSellAllSpl) scope.launch {
+            while (isActive) {
+                sellAllOnce()
+                delay(config.sellAllSplIntervalMs)
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                closeZeroAccounts()
+                delay(config.closeAccountsIntervalMs)
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                delay(config.clearMapIntervalMs)
+                stateMap.clear()
+            }
+        }
     }
 
-    fun singleTrade(tokenMint: String) {
-        processToken(solAmountToTrade, tokenMint)
+    fun singleTrade(mint: String) = trade(mint)
+
+    fun observeProfiles(flow: Flow<List<TokenProfile>>) = scope.launch {
+        flow.sample(5_000).collect { list ->
+            list.filter { it.chainId == "solana" }
+                .shuffled().take(5).forEach { p ->
+                    if (isNew(p.tokenAddress)) {
+                        delay(1_000)
+                        setLastSell(p.tokenAddress)
+                        trade(p.tokenAddress)
+                    }
+                }
+        }
     }
 
-    private fun closeZeroAccountsTask(delay: Long = 60_000 * 5) {
-        coroutineScope.launch {
-            while (true) {
-                delay(delay)
-                val listOfTokens = getTokenAccountsByOwner(
-                    NetworkDriver(client),
-                    walletPublicKey,
+    fun observePumpFun(flow: Flow<WebSocketResponse>) = scope.launch {
+        flow.filter { it.solAmount >= 0.5 && it.initialBuy > 2e7 && it.marketCapSol > 100 }
+            .buffer(5).debounce(2_000)
+            .collect {
+                if (isNew(it.mint)) {
+                    delay(10_000)
+                    setLastSell(it.mint)
+                    trade(it.mint)
+                }
+            }
+    }
+
+    fun observeBoosted(flow: Flow<List<TokenBoost>>) = scope.launch {
+        flow.sample(1_000).collect { list ->
+            list.filter { it.chainId == "solana" }
+                .shuffled().take(5).forEach { b ->
+                    if (isNew(b.tokenAddress)) {
+                        delay(2_000)
+                        setLastSell(b.tokenAddress)
+                        trade(b.tokenAddress)
+                    }
+                }
+        }
+    }
+
+    private fun trade(mint: String) {
+        stateMap[mint] = TokenStatus(mint, TokenState.Swapped)
+        scope.launch(Dispatchers.IO) {
+            runCatching {
+                config.jupiterSwapService.getQuoteAndPerformSwap(
+                    config.solAmountToTrade,
+                    config.swapMint.base58(),
+                    mint
                 )
-                val tokens = listOfTokens?.map { it.account.data.parsed.info }
-                    ?: throw Exception("ListOfTokens failed")
-                for (info in tokens.filter { it.tokenAmount.amount == "0" }) {
-                    println("close account ${info.mint}")
-                    delay(1000)
-                    kotlin.runCatching {
-                        executeSolTransaction(
-                            rpc = rpc,
-                            transactionInstruction = createCloseAccountInstruction(
-                                tokenAccount = PublicKey(info.mint),
-                                destination = swapMint,
-                                owner = walletPublicKey
-                            )
-                        )
-                    }
+            }.onSuccess { quote ->
+                if (executeSwapTransaction(config.rpc, quote.swapTransaction, executor)) {
+                    stateMap[mint]?.state = TokenState.Swapped
                 }
             }
         }
     }
 
-    private fun clearTokensMapWithDelay(delay: Long = 60_000 * 10) {
-        coroutineScope.launch {
-            while (true) {
-                delay(delay)
-                tokenStateMap.clear()
-            }
-        }
-    }
-
-    fun observeTokenProfiles(tokenProfilesFlow: Flow<List<TokenProfile>>) {
-        coroutineScope.launch {
-            tokenProfilesFlow.buffer().debounce(20_000).collect { profileList ->
-                profileList.filter { it.chainId == "solana" }.forEach { profile ->
-                    if (isNewToken(profile.tokenAddress)) {
-                        delay(1000)
-                        println("New token detected: ${profile.tokenAddress}")
-                        processToken(solAmountToTrade, profile.tokenAddress)
+    fun sellOneToken(mint: String) = scope.launch(Dispatchers.IO) {
+        stateMap[mint]?.let { status ->
+            if (status.state == TokenState.Swapped || status.state is TokenState.SellFailed) {
+                stateMap[mint] = TokenStatus(mint, TokenState.Selling)
+                val info = fetchSingleTokenInfo(mint) ?: run {
+                    stateMap[mint]?.state = TokenState.SellFailed("No token info found for $mint")
+                    return@launch
+                }
+                if (info.tokenAmount.amount == "0") {
+                    stateMap[mint]?.state = TokenState.SellFailed("Token balance is zero for $mint")
+                    return@launch
+                }
+                setLastSell(mint)
+                runCatching {
+                    config.jupiterSwapService.getQuoteAndPerformSwap(
+                        info.tokenAmount.amount,
+                        mint,
+                        config.swapMint.base58()
+                    )
+                }.onSuccess { swap ->
+                    val sold = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                    if (sold) {
+                        stateMap[mint]?.state = TokenState.Sold
+                    } else {
+                        stateMap[mint]?.state =
+                            TokenState.SellFailed("Transaction failed for $mint")
                     }
+                }.onFailure {
+                    stateMap[mint]?.state =
+                        TokenState.SellFailed("Swap error for $mint: ${it.message}")
                 }
             }
         }
     }
 
+    private fun isNew(mint: String) =
+        stateMap.size < config.maxKnownTokens && !stateMap.containsKey(mint)
 
-    fun observePumpFun(tokenProfilesFlow: Flow<WebSocketResponse>) {
-        coroutineScope.launch {
-            tokenProfilesFlow.filter { it.marketCapSol > 35 }
-                .buffer(2)
-                .debounce(2000)
-                .collect { response ->
-                    if (isNewToken(response.mint)) {
-                        delay(10000)
-                        println("ProcessToken : ${response.mint}")
-                        lastSellTimes[response.mint] = System.currentTimeMillis()
-                        processToken(solAmountToTrade, response.mint)
+    private fun setLastSell(mint: String) {
+        lastSell[mint] = System.currentTimeMillis()
+    }
+
+    private fun canSell(mint: String) =
+        System.currentTimeMillis() - (lastSell[mint] ?: 0L) >= config.sellWaitMs
+
+    private suspend fun closeZeroAccounts() {
+        allAccounts()?.filter {
+            it.account.data.parsed.info.tokenAmount.amount == "0"
+        }?.take(config.zeroBalanceCloseBatch)?.let { zeroList ->
+            runCatching {
+                executeSolTransaction(
+                    config.rpc,
+                    zeroList.map {
+                        createCloseAccountInstruction(PublicKey(it.pubkey), config.walletPublicKey)
                     }
-                }
-        }
-    }
-
-    fun observeTokenBoostedProfiles(tokenProfilesFlow: Flow<List<TokenBoost>>) {
-        coroutineScope.launch {
-            tokenProfilesFlow.sample(1000).collect { profileList ->
-                profileList.filter { it.chainId == "solana" }.forEach { profile ->
-                    if (isNewToken(profile.tokenAddress)) {
-                        delay(2000)
-                        lastSellTimes[profile.tokenAddress] = System.currentTimeMillis()
-                        println("New token detected: ${profile.tokenAddress}")
-                        processToken(solAmountToTrade, profile.tokenAddress)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun isNewToken(tokenAddress: String): Boolean {
-        return !tokenStateMap.containsKey(tokenAddress)
-    }
-
-    private fun processToken(amount: BigDecimal, tokenAddress: String) {
-        tokenStateMap[tokenAddress] = TokenStatus(tokenAddress, TokenState.SWAPPED)
-        coroutineScope.launch {
-            withContext(Dispatchers.IO) {
-                handleSwap(amount, tokenAddress)
-            }
-        }
-    }
-
-    private suspend fun handleSwap(amount: BigDecimal, tokenAddress: String) {
-        val tokenStatus = tokenStateMap[tokenAddress] ?: return
-        try {
-
-            println("Swapping token: $tokenAddress")
-
-            val response = jupiterSwapService.getQuoteAndPerformSwap(
-                amount, swapMint.base58(), tokenAddress
-            )
-
-            val success =
-                executeSwapTransaction(rpc, response.swapTransaction, transactionExecutor)
-            if (success) {
-                println("Token swapped successfully: $tokenAddress")
-                tokenStatus.state = TokenState.SWAPPED
-                // handleSell(profile)
-                return
-            } else {
-                throw Exception("Swap transaction failed")
-            }
-        } catch (e: Exception) {
-            println("Error during swap (${tokenAddress}): ${e.message}")
-        }
-    }
-
-    private fun handleSell(profile: TokenProfile) = coroutineScope.launch {
-        val tokenStatus = tokenStateMap[profile.tokenAddress] ?: return@launch
-        try {
-            println("Starting sell for token: ${profile.tokenAddress}")
-
-            val listOfTokens = getTokenAccountsByOwner(
-                NetworkDriver(client),
-                walletPublicKey
-            )
-
-            val amount = listOfTokens?.map { it.account.data.parsed.info }?.firstOrNull {
-                it.mint == profile.tokenAddress
-            }?.tokenAmount?.amount ?: run {
-                println("Sell Error no token amount: ${profile.tokenAddress}")
-                return@launch
-            }
-
-            val response = jupiterSwapService.getQuoteAndPerformSwap(
-                amount, profile.tokenAddress, swapMint.base58()
-            )
-
-            val success = executeSwapTransaction(rpc, response.swapTransaction, transactionExecutor)
-            if (success) {
-                println("Token sold successfully: ${profile.tokenAddress}")
-                tokenStatus.state = TokenState.SOLD
-            } else {
-                throw Exception("Sell transaction failed")
-            }
-        } catch (e: Exception) {
-            println("Error during sell (${profile.tokenAddress}): ${e.message}")
-        }
-    }
-
-    private fun pereodicSellAllSPL(
-        rpc: RPC,
-        jupiterSwapService: JupiterSwapService,
-        transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
-        periodicDelay: Long = 20_000,
-    ) = GlobalScope.launch {
-        withContext(Dispatchers.Default) {
-            while (true) {
-                delay(periodicDelay)
-                val listOfTokens = getTokenAccountsByOwner(
-                    NetworkDriver(client),
-                    walletPublicKey,
                 )
-                val tokens = listOfTokens?.map { it.account.data.parsed.info }
-                    ?: throw Exception("ListOfTokens failed")
-                for (info in tokens.filterNot { it.tokenAmount.amount == "0" }.shuffled()
-                    .take(10)) {
-                    if (sellLimit(info.mint, 59_000L)) {
-                        delay(1000)
-                        pereodicSellAllSPL(
-                            rpc, info, jupiterSwapService, transactionExecutor
-                        )
+            }
+        }
+    }
+
+    private suspend fun sellAllOnce() {
+        allTokens()?.filterNot {
+            it.mint == config.swapMint.base58() || it.tokenAmount.amount == "0"
+        }?.filter { canSell(it.mint) }
+            ?.take(config.splSellBatch)?.forEach { token ->
+                stateMap[token.mint] = TokenStatus(token.mint, TokenState.Selling)
+                setLastSell(token.mint)
+                runCatching {
+                    config.jupiterSwapService.getQuoteAndPerformSwap(
+                        token.tokenAmount.amount,
+                        token.mint,
+                        config.swapMint.base58()
+                    )
+                }.onSuccess { swap ->
+                    val sold = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                    if (sold) {
+                        stateMap[token.mint]?.state = TokenState.Sold
+                    } else {
+                        stateMap[token.mint]?.state =
+                            TokenState.SellFailed("Failed selling ${token.mint}")
                     }
+                }.onFailure {
+                    stateMap[token.mint]?.state =
+                        TokenState.SellFailed("Bulk swap error ${token.mint}: ${it.message}")
                 }
+                delay(500)
             }
-        }
     }
 
-    private val lastSellTimes = mutableMapOf<String, Long>()
-
-    private fun sellLimit(tokenId: String, waiteSellTime: Long): Boolean {
-        val now = System.currentTimeMillis()
-        val lastSellTime = lastSellTimes[tokenId] ?: 0L
-        return if (now - lastSellTime >= waiteSellTime) {
-            lastSellTimes[tokenId] = now
-            true
-        } else {
-            false
-        }
+    private suspend fun fetchSingleTokenInfo(mint: String): TokenInfo? {
+        return allTokens()?.firstOrNull { it.mint == mint }
     }
 
-    private fun pereodicSellAllSPL(
-        rpc: RPC,
-        info: TokenInfo,
-        jupiterSwapService: JupiterSwapService,
-        transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc)
-    ) = GlobalScope.launch {
-        try {
-            if (info.mint !in listOf(
-                    swapMint.base58(),
-                )
-            ) {
-                val amount = info.tokenAmount.amount
+    private suspend fun allAccounts() = runCatching {
+        getTokenAccountsByOwner(NetworkDriver(client), config.walletPublicKey)
+    }.getOrNull()
 
-                if (amount == "0") return@launch
-
-                println("Attempting to sell token: ${info.mint} with amount: $amount")
-
-                val response = jupiterSwapService.getQuoteAndPerformSwap(
-                    info.tokenAmount.amount,
-                    info.mint,
-                    swapMint.base58()
-                )
-
-                val success = runCatching {
-                    executeSwapTransaction(rpc, response.swapTransaction, transactionExecutor)
-                }.isSuccess
-
-                if (success) {
-                    println("Token sold successfully: ${info.mint}")
-                } else {
-                    println("Sell transaction failed for token: ${info.mint}")
-                }
-            }
-        } catch (e: Exception) {
-            println("Error processing token ${info.mint}: ${e.message}")
-        }
-    }
+    private suspend fun allTokens() = allAccounts()?.map { it.account.data.parsed.info }
 }
-
