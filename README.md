@@ -42,4 +42,5 @@
    - **JitoBundlerService** (if desired, set `useJito = true`)
 3. **Build** the project:
    ```bash
-   ./gradlew build
+   ./gradlew server:run
+
