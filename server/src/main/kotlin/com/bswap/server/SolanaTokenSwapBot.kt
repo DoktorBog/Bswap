@@ -13,7 +13,6 @@ import com.bswap.server.data.solana.transaction.createSwapTransaction
 import com.bswap.server.data.solana.transaction.executeSolTransaction
 import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.data.solana.transaction.getTokenAccountsByOwner
-import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.networking.NetworkDriver
 import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -37,12 +35,16 @@ private val logger = LoggerFactory.getLogger("SolanaTokenSwapBot")
 sealed interface TokenState {
     /** Newly queued token for swapping; we haven't completed the Jupiter swap yet. */
     data object TradePending : TokenState
+
     /** The token was successfully swapped from SOL into the SPL token. */
     data object Swapped : TokenState
+
     /** We are in the process of selling/swapping from the SPL token back to SOL. */
     data object Selling : TokenState
+
     /** The token was successfully sold back to SOL. */
     data object Sold : TokenState
+
     /** A failure state for any reason (swap, sell, etc.). */
     data class SellFailed(val reason: String) : TokenState
 }
@@ -59,9 +61,23 @@ data class TokenStatus(
 
 @OptIn(FlowPreview::class)
 class SolanaTokenSwapBot(
-    private val config: SolanaSwapBotConfig,
-    private val executor: DefaultTransactionExecutor = DefaultTransactionExecutor(config.rpc),
-    private val jitoBundlerService: JitoBundlerService? = null
+    private val config: SolanaSwapBotConfig = SolanaSwapBotConfig(),
+    private val executor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
+    private val jupiterSwapService: JupiterSwapService = JupiterSwapService(client),
+    private val jitoBundlerService: JitoBundlerService = JitoBundlerService(
+        client = client,
+        jitoFeeLamports = 1000,
+        tipAccounts = listOf(
+            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
+            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
+            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
+            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
+            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
+        )
+    )
 ) {
     private var processingTokens = AtomicInteger(0)
     private val stateMap = ConcurrentHashMap<String, TokenStatus>()
@@ -164,7 +180,7 @@ class SolanaTokenSwapBot(
         scope.launch(Dispatchers.IO) {
             runCatching {
                 // Attempt the Jupiter swap
-                config.jupiterSwapService.getQuoteAndPerformSwap(
+                jupiterSwapService.getQuoteAndPerformSwap(
                     config.solAmountToTrade,
                     config.swapMint.base58(),
                     mint
@@ -178,18 +194,19 @@ class SolanaTokenSwapBot(
                 }
 
                 // We have a valid transaction -> either enqueue to Jito or execute immediately
-                if (config.useJito && jitoBundlerService != null) {
+                if (config.useJito) {
                     jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
                     // We won't know success/fail until Jito executes it, so you may want to
                     // keep the state as TradePending or set it to Swapped if you're confident
                     // Jito will handle it. Example:
                     stateMap[mint]?.state = TokenState.Swapped
                 } else {
-                    val success = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                    val success = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                     if (success) {
                         stateMap[mint]?.state = TokenState.Swapped
                     } else {
-                        stateMap[mint]?.state = TokenState.SellFailed("Transaction failed for $mint")
+                        stateMap[mint]?.state =
+                            TokenState.SellFailed("Transaction failed for $mint")
                     }
                 }
             }.onFailure { ex ->
@@ -218,7 +235,7 @@ class SolanaTokenSwapBot(
             setLastSell(mint)
 
             runCatching {
-                config.jupiterSwapService.getQuoteAndPerformSwap(
+                jupiterSwapService.getQuoteAndPerformSwap(
                     info.tokenAmount.amount,
                     mint,
                     config.swapMint.base58()
@@ -228,16 +245,17 @@ class SolanaTokenSwapBot(
                     stateMap[mint]?.state = TokenState.SellFailed("No route/instructions for $mint")
                     return@onSuccess
                 }
-                if (config.useJito && jitoBundlerService != null) {
+                if (config.useJito) {
                     jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
                     // same note: either keep it as Selling, or mark it Sold preemptively
                     stateMap[mint]?.state = TokenState.Sold
                 } else {
-                    val sold = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                    val sold = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                     if (sold) {
                         stateMap[mint]?.state = TokenState.Sold
                     } else {
-                        stateMap[mint]?.state = TokenState.SellFailed("Transaction failed for $mint")
+                        stateMap[mint]?.state =
+                            TokenState.SellFailed("Transaction failed for $mint")
                     }
                 }
             }.onFailure {
@@ -272,7 +290,7 @@ class SolanaTokenSwapBot(
         }?.take(config.zeroBalanceCloseBatch)?.let { zeroList ->
             runCatching {
                 executeSolTransaction(
-                    config.rpc,
+                    rpc,
                     zeroList.map {
                         createCloseAccountInstruction(PublicKey(it.pubkey), config.walletPublicKey)
                     }
@@ -294,19 +312,20 @@ class SolanaTokenSwapBot(
                 setLastSell(token.mint)
 
                 runCatching {
-                    config.jupiterSwapService.getQuoteAndPerformSwap(
+                    jupiterSwapService.getQuoteAndPerformSwap(
                         token.tokenAmount.amount,
                         token.mint,
                         config.swapMint.base58()
                     )
                 }.onSuccess { swap ->
                     if (swap.swapTransaction == null) return@onSuccess
-                    if (config.useJito && jitoBundlerService != null) {
+                    if (config.useJito) {
                         jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
                         // Mark as Sold or keep as Selling depending on your logic
                         stateMap[token.mint]?.state = TokenState.Sold
                     } else {
-                        val sold = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                        val sold =
+                            executeSwapTransaction(rpc, swap.swapTransaction, executor)
                         stateMap[token.mint]?.state =
                             if (sold) TokenState.Sold
                             else TokenState.SellFailed("Failed selling ${token.mint}")

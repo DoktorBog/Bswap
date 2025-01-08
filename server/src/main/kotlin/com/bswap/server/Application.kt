@@ -25,29 +25,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 fun main() {
-    val jupiterSwapService = JupiterSwapService(client)
-    val executor = DefaultTransactionExecutor(rpc)
-    val jitoService = JitoBundlerService(
-        client = client,
-        jitoFeeLamports = 1000,
-        tipAccounts = listOf(
-            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
-            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
-            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
-            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
-            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
-        )
-    )
-    val config = SolanaSwapBotConfig(
-        rpc = rpc,
-        jupiterSwapService = jupiterSwapService,
-        useJito = true
-    )
     PumpFunService.connect()
-    val bot = SolanaTokenSwapBot(config, executor, jitoService)
+    val bot = SolanaTokenSwapBot()
     bot.runDexScreenerSwap(tokenProfiles = false, tokenBoostedProfiles = false)
     bot.observePumpFun(PumpFunService.observeEvents())
     embeddedServer(Netty, port = SERVER_PORT) {
