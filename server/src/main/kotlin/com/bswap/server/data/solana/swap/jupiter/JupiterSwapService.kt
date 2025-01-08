@@ -6,7 +6,7 @@ import com.bswap.server.data.solana.swap.jupiter.models.QuoteResponse
 import com.bswap.server.data.solana.swap.jupiter.models.SwapResponse
 import com.bswap.server.data.solana.transaction.HotSigner
 import com.bswap.server.data.solana.transaction.SolanaKeypair
-import com.bswap.server.data.solana.transaction.privateKey
+import com.bswap.server.privateKey
 import foundation.metaplex.base58.decodeBase58
 import foundation.metaplex.base58.encodeToBase58String
 import foundation.metaplex.solanaeddsa.SolanaEddsa

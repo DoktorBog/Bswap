@@ -1,6 +1,7 @@
 package com.bswap.server.data.solana.transaction
 
 import com.bswap.server.data.formatLamports
+import com.bswap.server.privateKey
 import com.metaplex.signer.Signer
 import foundation.metaplex.base58.decodeBase58
 import foundation.metaplex.base58.encodeToBase58String
@@ -17,9 +18,6 @@ import foundation.metaplex.solanaeddsa.SolanaEddsa
 import foundation.metaplex.solanapublickeys.PublicKey
 import org.sol4k.VersionedTransaction
 import java.math.BigDecimal
-
-const val privateKey: String =
-    ""
 
 data class TransactionExecutionResult(
     val confirmed: Boolean,

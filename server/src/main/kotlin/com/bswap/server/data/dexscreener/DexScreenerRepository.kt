@@ -31,8 +31,8 @@ class DexScreenerRepository(
     ) {
         // Refresh endpoints that require no parameters
         startAutoRefreshTokenProfiles()
-        //startAutoRefreshLatestBoostedTokens()
-        //startAutoRefreshTopBoostedTokens()
+        startAutoRefreshLatestBoostedTokens()
+        startAutoRefreshTopBoostedTokens()
 //
         // Refresh endpoints that need parameters if provided
         if (chainId != null && tokenAddress != null) {

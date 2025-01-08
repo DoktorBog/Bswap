@@ -22,37 +22,39 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
+private val logger = LoggerFactory.getLogger("SolanaTokenSwapBot")
+
+/** Our token states, including a new TradePending state. */
 sealed interface TokenState {
+    /** Newly queued token for swapping; we haven't completed the Jupiter swap yet. */
+    data object TradePending : TokenState
+    /** The token was successfully swapped from SOL into the SPL token. */
     data object Swapped : TokenState
+    /** We are in the process of selling/swapping from the SPL token back to SOL. */
     data object Selling : TokenState
+    /** The token was successfully sold back to SOL. */
     data object Sold : TokenState
+    /** A failure state for any reason (swap, sell, etc.). */
     data class SellFailed(val reason: String) : TokenState
 }
 
-data class TokenStatus(val tokenAddress: String, var state: TokenState)
-
-data class SolanaSwapBotConfig(
-    val rpc: RPC,
-    val jupiterSwapService: JupiterSwapService,
-    val walletPublicKey: PublicKey = PublicKey(""),
-    val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
-    val solAmountToTrade: BigDecimal = BigDecimal("0.0001"),
-    val autoSellAllSpl: Boolean = true,
-    val maxKnownTokens: Int = 3,
-    val sellWaitMs: Long = 35_000,
-    val zeroBalanceCloseBatch: Int = 9,
-    val splSellBatch: Int = 10,
-    val closeAccountsIntervalMs: Long = 60_000,
-    val sellAllSplIntervalMs: Long = 10_000,
-    val clearMapIntervalMs: Long = 60_000 * 60,
-    val useJito: Boolean = false
+/**
+ * Track a token's address, current state, and when it was created
+ * (helps us time out if still pending after N seconds).
+ */
+data class TokenStatus(
+    val tokenAddress: String,
+    var state: TokenState,
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 @OptIn(FlowPreview::class)
@@ -67,33 +69,52 @@ class SolanaTokenSwapBot(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
-        if (config.autoSellAllSpl) scope.launch {
-            while (isActive) {
-                sellAllOnce()
-                delay(config.sellAllSplIntervalMs)
+        // 1) Periodically sell all SPL tokens
+        if (config.autoSellAllSpl) {
+            scope.launch {
+                while (isActive) {
+                    sellAllOnce()
+                    delay(config.sellAllSplIntervalMs)
+                }
             }
         }
+
+        // 2) Periodically close zero-balance accounts
         scope.launch {
             while (isActive) {
                 closeZeroAccounts()
                 delay(config.closeAccountsIntervalMs)
             }
         }
+
+        // 3) Periodically clear the state map
         scope.launch {
             while (isActive) {
                 delay(config.clearMapIntervalMs)
                 stateMap.clear()
             }
         }
+
+        // 4) Periodically remove tokens that have been TradePending > 30 seconds
+        scope.launch {
+            while (isActive) {
+                delay(5_000) // check every 5 seconds
+                clearUnboughtCoins()
+            }
+        }
     }
 
+    /** Let external callers request a single trade. */
     fun singleTrade(mint: String) = trade(mint)
 
+    /** Observe DexScreener-provided token profiles. */
     fun observeProfiles(flow: Flow<List<TokenProfile>>) = scope.launch {
         flow.collect { list ->
             list.filter { it.chainId == "solana" }
-                .shuffled().take(5).forEach { p ->
+                .forEach { p ->
                     if (isNew(p.tokenAddress)) {
+                        // The user’s original code had a delay(1_000) here.
+                        // If you prefer no hard-coded delay, remove or make it configurable.
                         delay(1_000)
                         setLastSell(p.tokenAddress)
                         trade(p.tokenAddress)
@@ -102,20 +123,23 @@ class SolanaTokenSwapBot(
         }
     }
 
+    /** Observe PumpFun stream (TokenTradeResponse). */
     fun observePumpFun(flow: Flow<TokenTradeResponse>) = scope.launch {
-        flow.sample(5000).collect {
-            if (isNew(it.mint)) {
-                if (!isTokenValid(it.mint)) return@collect
+        flow.debounce(2000).collect {
+            if (isNew(it.mint) && isTokenValid(it.mint)) {
                 setLastSell(it.mint)
                 trade(it.mint)
             }
         }
     }
 
+    /** Observe your “boosted” tokens from DexScreener or other source. */
     fun observeBoosted(flow: Flow<List<TokenBoost>>) = scope.launch {
         flow.sample(1_000).collect { list ->
             list.filter { it.chainId == "solana" }
-                .shuffled().take(5).forEach { b ->
+                .shuffled()
+                .take(5)
+                .forEach { b ->
                     if (isNew(b.tokenAddress)) {
                         delay(2_000)
                         setLastSell(b.tokenAddress)
@@ -125,82 +149,123 @@ class SolanaTokenSwapBot(
         }
     }
 
+    /**
+     * Initiate a trade from SOL -> new token. Mark it as TradePending.
+     * If the Jupiter swap transaction is successful, mark as Swapped.
+     * If it fails or no route, remove from map or mark as SellFailed.
+     */
     private fun trade(mint: String) {
+        logger.info("Trade mint = $mint")
         processingTokens.incrementAndGet()
-        stateMap[mint] = TokenStatus(mint, TokenState.Swapped)
+
+        // Mark as pending initially
+        stateMap[mint] = TokenStatus(mint, TokenState.TradePending)
+
         scope.launch(Dispatchers.IO) {
             runCatching {
+                // Attempt the Jupiter swap
                 config.jupiterSwapService.getQuoteAndPerformSwap(
                     config.solAmountToTrade,
                     config.swapMint.base58(),
                     mint
                 )
             }.onSuccess { swap ->
-                if (swap.swapTransaction == null) return@launch
+                // If Jupiter provided no instructions, remove it from map
+                if (swap.swapTransaction == null) {
+                    logger.warn("No instructions from Jupiter for $mint. Removing from map.")
+                    stateMap.remove(mint)
+                    return@launch
+                }
+
+                // We have a valid transaction -> either enqueue to Jito or execute immediately
                 if (config.useJito && jitoBundlerService != null) {
                     jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
+                    // We won't know success/fail until Jito executes it, so you may want to
+                    // keep the state as TradePending or set it to Swapped if you're confident
+                    // Jito will handle it. Example:
+                    stateMap[mint]?.state = TokenState.Swapped
                 } else {
-                    if (executeSwapTransaction(config.rpc, swap.swapTransaction, executor)) {
+                    val success = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                    if (success) {
                         stateMap[mint]?.state = TokenState.Swapped
+                    } else {
+                        stateMap[mint]?.state = TokenState.SellFailed("Transaction failed for $mint")
+                    }
+                }
+            }.onFailure { ex ->
+                logger.error("Swap error for $mint: ${ex.message}")
+                stateMap[mint]?.state = TokenState.SellFailed("Swap exception: ${ex.message}")
+            }
+        }
+    }
+
+    /**
+     * Sell a single token on request (token minted -> convert back to SOL).
+     * Typically used for quick manual sells.
+     */
+    fun sellOneToken(mint: String) = scope.launch(Dispatchers.IO) {
+        val status = stateMap[mint] ?: return@launch
+        if (status.state == TokenState.Swapped || status.state is TokenState.SellFailed) {
+            stateMap[mint] = TokenStatus(mint, TokenState.Selling)
+            val info = fetchSingleTokenInfo(mint) ?: run {
+                stateMap[mint]?.state = TokenState.SellFailed("No token info found for $mint")
+                return@launch
+            }
+            if (info.tokenAmount.amount == "0") {
+                stateMap[mint]?.state = TokenState.SellFailed("Token balance is zero for $mint")
+                return@launch
+            }
+            setLastSell(mint)
+
+            runCatching {
+                config.jupiterSwapService.getQuoteAndPerformSwap(
+                    info.tokenAmount.amount,
+                    mint,
+                    config.swapMint.base58()
+                )
+            }.onSuccess { swap ->
+                if (swap.swapTransaction == null) {
+                    stateMap[mint]?.state = TokenState.SellFailed("No route/instructions for $mint")
+                    return@onSuccess
+                }
+                if (config.useJito && jitoBundlerService != null) {
+                    jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
+                    // same note: either keep it as Selling, or mark it Sold preemptively
+                    stateMap[mint]?.state = TokenState.Sold
+                } else {
+                    val sold = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                    if (sold) {
+                        stateMap[mint]?.state = TokenState.Sold
+                    } else {
+                        stateMap[mint]?.state = TokenState.SellFailed("Transaction failed for $mint")
                     }
                 }
             }.onFailure {
-                stateMap.remove(mint)
+                stateMap[mint]?.state = TokenState.SellFailed("Swap error for $mint: ${it.message}")
             }
         }
     }
 
-    fun sellOneToken(mint: String) = scope.launch(Dispatchers.IO) {
-        stateMap[mint]?.let { status ->
-            if (status.state == TokenState.Swapped || status.state is TokenState.SellFailed) {
-                stateMap[mint] = TokenStatus(mint, TokenState.Selling)
-                val info = fetchSingleTokenInfo(mint) ?: run {
-                    stateMap[mint]?.state = TokenState.SellFailed("No token info found for $mint")
-                    return@launch
-                }
-                if (info.tokenAmount.amount == "0") {
-                    stateMap[mint]?.state = TokenState.SellFailed("Token balance is zero for $mint")
-                    return@launch
-                }
-                setLastSell(mint)
-                runCatching {
-                    config.jupiterSwapService.getQuoteAndPerformSwap(
-                        info.tokenAmount.amount,
-                        mint,
-                        config.swapMint.base58()
-                    )
-                }.onSuccess { swap ->
-                    if (swap.swapTransaction == null) return@onSuccess
-                    if (config.useJito && jitoBundlerService != null) {
-                        jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
-                    } else {
-                        val sold =
-                            executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
-                        if (sold) {
-                            stateMap[mint]?.state = TokenState.Sold
-                        } else {
-                            stateMap[mint]?.state =
-                                TokenState.SellFailed("Transaction failed for $mint")
-                        }
-                    }
-                }.onFailure {
-                    stateMap[mint]?.state =
-                        TokenState.SellFailed("Swap error for $mint: ${it.message}")
-                }
-            }
-        }
-    }
+    // --- Helpers / housekeeping ---
 
-    private fun isNew(mint: String) =
-        processingTokens.get() < config.maxKnownTokens && !stateMap.containsKey(mint)
+    private fun isNew(mint: String) = !stateMap.containsKey(mint)
 
     private fun setLastSell(mint: String) {
         lastSell[mint] = System.currentTimeMillis()
     }
 
-    private fun canSell(mint: String) =
-        System.currentTimeMillis() - (lastSell[mint] ?: 0L) >= config.sellWaitMs
+    /**
+     * Whether enough time (sellWaitMs) has passed to allow us to re-sell or do an operation again
+     * on this token.
+     */
+    private fun canSell(mint: String): Boolean {
+        val last = lastSell[mint] ?: 0L
+        return System.currentTimeMillis() - last >= config.sellWaitMs
+    }
 
+    /**
+     * Close zero-balance accounts in batches, triggered on a config-based interval.
+     */
     private suspend fun closeZeroAccounts() {
         allAccounts()?.filter {
             it.account.data.parsed.info.tokenAmount.amount == "0"
@@ -216,13 +281,18 @@ class SolanaTokenSwapBot(
         }
     }
 
+    /**
+     * Sell all SPL tokens (except SOL) in a batch, triggered on a config-based interval.
+     */
     private suspend fun sellAllOnce() {
-        allTokens()?.filterNot {
-            it.mint == config.swapMint.base58() || it.tokenAmount.amount == "0"
-        }?.filter { canSell(it.mint) }
-            ?.take(config.splSellBatch)?.forEach { token ->
+        allTokens()
+            ?.filterNot { it.mint == config.swapMint.base58() || it.tokenAmount.amount == "0" }
+            ?.filter { canSell(it.mint) }
+            ?.take(config.splSellBatch)
+            ?.forEach { token ->
                 stateMap[token.mint] = TokenStatus(token.mint, TokenState.Selling)
                 setLastSell(token.mint)
+
                 runCatching {
                     config.jupiterSwapService.getQuoteAndPerformSwap(
                         token.tokenAmount.amount,
@@ -233,33 +303,58 @@ class SolanaTokenSwapBot(
                     if (swap.swapTransaction == null) return@onSuccess
                     if (config.useJito && jitoBundlerService != null) {
                         jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
+                        // Mark as Sold or keep as Selling depending on your logic
+                        stateMap[token.mint]?.state = TokenState.Sold
                     } else {
-                        val sold =
-                            executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
-                        if (sold) {
-                            stateMap[token.mint]?.state = TokenState.Sold
-                        } else {
-                            stateMap[token.mint]?.state =
-                                TokenState.SellFailed("Failed selling ${token.mint}")
-                        }
+                        val sold = executeSwapTransaction(config.rpc, swap.swapTransaction, executor)
+                        stateMap[token.mint]?.state =
+                            if (sold) TokenState.Sold
+                            else TokenState.SellFailed("Failed selling ${token.mint}")
                     }
                 }.onFailure {
                     stateMap[token.mint]?.state =
                         TokenState.SellFailed("Bulk swap error ${token.mint}: ${it.message}")
                 }
+
+                // The original code had delay(500) here as a spacing between sells
+                // You can remove or make it config-based if you prefer not to hard-code.
                 delay(500)
             }
     }
 
+    /** Fetch the token info for a single mint, or null if not found. */
     private suspend fun fetchSingleTokenInfo(mint: String): TokenInfo? {
         return allTokens()?.firstOrNull { it.mint == mint }
     }
 
+    /** Get all token accounts for the owner. */
     private suspend fun allAccounts() = runCatching {
+        // Replace `client` with your actual network client if needed
         getTokenAccountsByOwner(NetworkDriver(client), config.walletPublicKey)
     }.getOrNull().also {
         processingTokens.set(it?.size ?: 0)
     }
 
+    /** Get all token info from those accounts. */
     private suspend fun allTokens() = allAccounts()?.map { it.account.data.parsed.info }
+
+    /**
+     * Clear tokens that are still TradePending after 30 seconds
+     */
+    private suspend fun clearUnboughtCoins() {
+        val now = System.currentTimeMillis()
+        val expiredMints = stateMap.filterValues { status ->
+            // still pending
+            status.state is TokenState.TradePending &&
+                    // older than 30 seconds
+                    now - status.createdAt >= 30_000
+        }.keys
+
+        if (expiredMints.isNotEmpty()) {
+            expiredMints.forEach { mint ->
+                logger.warn("Removing $mint from stateMap (TradePending > 30s).")
+                stateMap.remove(mint)
+            }
+        }
+    }
 }

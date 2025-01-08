@@ -44,10 +44,11 @@ fun main() {
     val config = SolanaSwapBotConfig(
         rpc = rpc,
         jupiterSwapService = jupiterSwapService,
-        useJito = false
+        useJito = true
     )
     PumpFunService.connect()
     val bot = SolanaTokenSwapBot(config, executor, jitoService)
+    bot.runDexScreenerSwap(tokenBoostedProfiles = false)
     bot.observePumpFun(PumpFunService.observeEvents())
     embeddedServer(Netty, port = SERVER_PORT) {
         routing {
@@ -60,10 +61,10 @@ fun main() {
 
 fun SolanaTokenSwapBot.runDexScreenerSwap(
     tokenProfiles: Boolean = true,
-    tokenBoostedProfiles: Boolean = false,
+    tokenBoostedProfiles: Boolean = true,
 ) {
     GlobalScope.launch {
-        delay(60000)
+        delay(3_000)
         if (tokenProfiles) {
             observeProfiles(dexScreenerRepository.tokenProfilesFlow)
         }
@@ -71,7 +72,15 @@ fun SolanaTokenSwapBot.runDexScreenerSwap(
             observeBoosted(dexScreenerRepository.latestBoostedTokensFlow)
             observeBoosted(dexScreenerRepository.topBoostedTokensFlow)
         }
-        dexScreenerRepository.startAutoRefreshAll()
+        dexScreenerRepository.apply {
+            if (tokenProfiles) {
+                startAutoRefreshTokenProfiles()
+            }
+            if (tokenBoostedProfiles) {
+                startAutoRefreshLatestBoostedTokens()
+                startAutoRefreshTopBoostedTokens()
+            }
+        }
     }
 }
 
