@@ -14,7 +14,7 @@ data class PumpFunResponse(
 )
 
 suspend fun isTokenValid(mint: String): Boolean = runCatching {
-    delay(20_000)
+    delay(10_000)
     val apiUrl = "https://frontend-api.pump.fun/coins/$mint"
     val response: PumpFunResponse = client.get(apiUrl).body()
     val currentTime = System.currentTimeMillis()
@@ -23,7 +23,7 @@ suspend fun isTokenValid(mint: String): Boolean = runCatching {
     //    println("Token $mint is not tradable!")
     //    return false
     //}
-    if (ageSeconds > 60) {
+    if (ageSeconds > 40) {
         println("Token $mint too old - creation time $ageSeconds seconds ago")
         return false
     }

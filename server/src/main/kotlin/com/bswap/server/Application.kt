@@ -48,7 +48,7 @@ fun main() {
     )
     PumpFunService.connect()
     val bot = SolanaTokenSwapBot(config, executor, jitoService)
-    bot.runDexScreenerSwap(tokenBoostedProfiles = false)
+    bot.runDexScreenerSwap(tokenProfiles = false, tokenBoostedProfiles = false)
     bot.observePumpFun(PumpFunService.observeEvents())
     embeddedServer(Netty, port = SERVER_PORT) {
         routing {
