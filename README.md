@@ -5,27 +5,41 @@
 
 ## Overview
 
-**SolanaTokenSwapBot** is an automated trading bot designed to help you monitor new Solana tokens (particularly memecoins), automatically buy them under specified conditions, and optionally sell them using predefined strategies. 
+**SolanaTokenSwapBot** is an automated trading bot designed to help you monitor new Solana tokens (particularly memecoins), automatically buy them under specified conditions, and optionally sell them using predefined strategies. It integrates with:
 
-It integrates with:
 - **[JupiterSwapService](https://jup.ag/)** for swap quotes and transactions.
 - **Metaplex RPC** for executing on-chain transactions in Solana.
+- **[Jito Bundles](https://docs.jito.wtf/lowlatencytxnsend/)** (optional) for low-latency, MEV-protected transactions on Solana.
 
-## Features
+### Key Features
 
 - **Automated Buy Logic**  
-  Schedules buys after detection of new tokens that pass your filters (e.g., market cap, rug-check status).
+  Watches token feeds (like DexScreener or PumpFun) and automatically buys tokens that pass configurable filters.
 
 - **Periodic Selling**  
-  Includes a routine to periodically sell all non-zero token balances or handle partial sells if you prefer custom logic.
+  Optionally sells SPL tokens at a configurable interval (e.g. every 10 seconds).
 
 - **Account Cleanup**  
-  Periodically closes zero-balance SPL token accounts to keep your wallet tidy.
+  Closes zero-balance token accounts on a schedule to keep your wallet uncluttered.
 
 - **Customizable Parameters**  
-  Adjustable parameters like `minMarketCapSol`, `buyDelayMs`, `skipRugFlaggedTokens`, `solAmountToTrade`, etc.
+  Tune parameters such as `solAmountToTrade`, `maxKnownTokens`, `autoSellAllSpl`, `closeAccountsIntervalMs`, etc.
+
+- **Jito Integration**  
+  If `useJito` is enabled in the config, transactions are bundled (up to 5 at a time) and sent via `sendBundle`, enhancing MEV protection and faster landing on Solana.
 
 ## Requirements
 
-1. **Kotlin 2+** (or Java 11+ if compiled with Kotlin)
-2. **Gradle** or **Maven** for dependency management
+- **Kotlin 1.7+** (or Java 11+)
+- **Gradle** (or Maven) for dependency management
+
+## Installation
+
+1. **Clone** this repository.
+2. **Configure** environment variables or directly edit `SolanaSwapBotConfig` to set:
+   - **RPC endpoint**  
+   - **JupiterSwapService**  
+   - **JitoBundlerService** (if desired, set `useJito = true`)
+3. **Build** the project:
+   ```bash
+   ./gradlew build
