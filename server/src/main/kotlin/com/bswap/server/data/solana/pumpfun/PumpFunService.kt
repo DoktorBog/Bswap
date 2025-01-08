@@ -16,25 +16,19 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 object PumpFunService {
 
     private const val WS_URL = "wss://pumpportal.fun/api/data"
-
-    private val eventFlow = MutableSharedFlow<WebSocketResponse>()
-    private val tokenStorage = mutableSetOf<String>()
+    private val eventFlow = MutableSharedFlow<TokenTradeResponse>()
     private val stateFlow = MutableStateFlow<WebSocketState>(WebSocketState.Disconnected)
+    private val subscribedTokens = mutableSetOf<String>()
+    private val processedTokens = mutableSetOf<String>()
     private val json = Json { ignoreUnknownKeys = true }
-
-    private val handlers = listOf(
-        NewTokenHandler(tokenStorage, eventFlow),
-        TradeEventHandler(eventFlow)
-    )
-
     private var session: DefaultClientWebSocketSession? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -45,10 +39,7 @@ object PumpFunService {
                 client.webSocket(WS_URL) {
                     session = this
                     stateFlow.emit(WebSocketState.Connected)
-                    println("Connected to WebSocket")
-
                     sendRequest("subscribeNewToken")
-
                     for (frame in incoming) {
                         when (frame) {
                             is Frame.Text -> handleMessage(frame.readText())
@@ -58,53 +49,70 @@ object PumpFunService {
                     }
                 }
             } catch (e: Exception) {
-                println("WebSocket Error: ${e.message}")
                 reconnect()
             }
         }
     }
 
-    // Reconnect logic
     private suspend fun reconnect() {
-        println("Reconnecting...")
         stateFlow.emit(WebSocketState.Reconnecting)
-        delay(5000) // Retry after delay
+        delay(5000)
         connect()
     }
 
-    // Disconnect WebSocket
     fun disconnect() {
         scope.launch {
             session?.close()
-            println("Disconnected from WebSocket")
             stateFlow.emit(WebSocketState.Disconnected)
         }
     }
 
-    // Send Requests (Builder Pattern)
+    private suspend fun subscribeTokenTrade(token: String) {
+        if (subscribedTokens.add(token)) {
+            sendRequest("subscribeTokenTrade", listOf(token))
+        }
+    }
+
+    private suspend fun unsubscribeTokenTrade(token: String) {
+        if (subscribedTokens.remove(token)) {
+            sendRequest("unsubscribeTokenTrade", listOf(token))
+        }
+    }
+
     private suspend fun sendRequest(method: String, keys: List<String>? = null) {
         val request = WebSocketRequestBuilder()
             .setMethod(method)
             .setKeys(keys)
             .build()
         session?.send(Frame.Text(json.encodeToString(request)))
-        println("Sent Request: $method")
     }
 
-    // Handle Incoming Messages
     private suspend fun handleMessage(message: String) {
         runCatching {
-            val response = json.decodeFromString<WebSocketResponse>(message)
-            handlers.forEach { handler ->
-                if (handler.handle(response)) return
+            val jsonObject = json.parseToJsonElement(message).jsonObject
+
+            if (jsonObject.containsKey("signature")) {
+                val trade = json.decodeFromString<TokenTradeResponse>(message)
+                handleTokenTrade(trade)
+            } else if (jsonObject.containsKey("token")) {
+                val newToken = json.decodeFromString<NewTokenResponse>(message)
+                handleNewToken(newToken)
             }
         }
-        println("Unhandled Event: $message")
     }
 
-    // Observe Trades
-    fun observeEvents(): Flow<WebSocketResponse> = eventFlow.asSharedFlow()
+    private suspend fun handleNewToken(response: NewTokenResponse) {
+        if (processedTokens.contains(response.token)) return
+        subscribeTokenTrade(response.token)
+    }
 
-    // Observe State
+    private suspend fun handleTokenTrade(response: TokenTradeResponse) {
+        if (processedTokens.add(response.mint)) {
+            eventFlow.emit(response)
+            unsubscribeTokenTrade(response.mint)
+        }
+    }
+
+    fun observeEvents(): Flow<TokenTradeResponse> = eventFlow.asSharedFlow()
     fun observeState(): Flow<WebSocketState> = stateFlow.asStateFlow()
 }

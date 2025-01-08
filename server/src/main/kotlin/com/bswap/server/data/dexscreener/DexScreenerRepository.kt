@@ -14,7 +14,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
-const val autoRefreshInterval = 4_000L
+const val autoRefreshInterval = 5_000L
 
 class DexScreenerRepository(
     private val client: DexScreenerClient,
@@ -31,8 +31,8 @@ class DexScreenerRepository(
     ) {
         // Refresh endpoints that require no parameters
         startAutoRefreshTokenProfiles()
-        startAutoRefreshLatestBoostedTokens()
-        startAutoRefreshTopBoostedTokens()
+        //startAutoRefreshLatestBoostedTokens()
+        //startAutoRefreshTopBoostedTokens()
 //
         // Refresh endpoints that need parameters if provided
         if (chainId != null && tokenAddress != null) {

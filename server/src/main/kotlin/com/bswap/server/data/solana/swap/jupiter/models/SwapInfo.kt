@@ -39,8 +39,9 @@ data class SwapInfo(
 
 @Serializable
 data class SwapResponse(
-    val swapTransaction: String,
-    val lastValidBlockHeight: Long,
+    val error: String? = null,
+    val swapTransaction: String? = null,
+    val lastValidBlockHeight: Long? = null,
     val prioritizationFeeLamports: Long? = null,
     val computeUnitLimit: Long? = null,
     val prioritizationType: PrioritizationType? = null,

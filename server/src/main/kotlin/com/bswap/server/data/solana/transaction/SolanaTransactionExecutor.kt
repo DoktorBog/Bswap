@@ -37,16 +37,22 @@ class HotSigner(private val keyPair: Keypair) : Signer {
         SolanaEddsa.sign(message, keyPair)
 }
 
+suspend fun createSwapTransaction(
+    base64: String,
+): ByteArray {
+    val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
+    val sender = org.sol4k.Keypair.fromSecretKey(k.secretKey)
+    val transaction = VersionedTransaction.from(base64)
+    transaction.sign(sender)
+    return transaction.serialize()
+}
+
 suspend fun executeSwapTransaction(
     rpc: RPC,
     base64: String,
     transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
 ): Boolean {
-    val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
-    val sender = org.sol4k.Keypair.fromSecretKey(k.secretKey)
-    val transaction = VersionedTransaction.from(base64)
-    transaction.sign(sender)
-    return transactionExecutor.executeAndConfirm(transaction.serialize()).confirmed
+    return transactionExecutor.executeAndConfirm(createSwapTransaction(base64)).confirmed
 }
 
 suspend fun executeSolTransaction(
@@ -86,27 +92,36 @@ suspend fun executeSolTransaction(
     transactionExecutor.executeAndConfirm(transaction)
 }
 
-suspend fun executeSolTransaction(
+suspend fun createSolTransaction(
     rpc: RPC,
-    amount: BigDecimal,
-    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
-) {
-
+    amount: BigDecimal? = null,
+    lamports: Long? = null,
+    toPublicKey: PublicKey = PublicKey(""),
+): Transaction {
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
     val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
     val latestBlockhash = rpc.getLatestBlockhash(null)
-    val transaction: Transaction = SolanaTransactionBuilder()
+    return SolanaTransactionBuilder()
         .addInstruction(
             transfer(
                 k.publicKey,
-                PublicKey(""),
-                amount.formatLamports()
+                toPublicKey,
+                amount?.formatLamports() ?: (lamports ?: 0L)
             )
         )
         .setRecentBlockHash(latestBlockhash.blockhash)
         .setSigners(listOf(signer))
         .build()
-    transactionExecutor.executeAndConfirm(transaction)
+}
+
+suspend fun executeSolTransaction(
+    rpc: RPC,
+    amount: BigDecimal? = null,
+    lamports: Long? = null,
+    toPublicKey: PublicKey = PublicKey(""),
+    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
+) {
+    transactionExecutor.executeAndConfirm(createSolTransaction(rpc, amount, lamports, toPublicKey))
 }
 
 class DefaultTransactionExecutor(

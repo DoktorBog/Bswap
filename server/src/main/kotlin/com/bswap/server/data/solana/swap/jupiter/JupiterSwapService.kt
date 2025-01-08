@@ -37,8 +37,8 @@ class JupiterSwapService(
             parameter("outputMint", outputMint)
             parameter("amount", amount)
             parameter("autoSlippage", true)
-            parameter("excludeDexes", listOf("6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P"))
         }
+        println("response $response")
         return json.decodeFromString(QuoteResponse.serializer(), response.bodyAsText())
     }
 
@@ -53,12 +53,12 @@ class JupiterSwapService(
                 {
                     "quoteResponse": ${Json.encodeToString(QuoteResponse.serializer(), quote)},
                     "userPublicKey": "$userPublicKey",
-                    "useSharedAccounts": true,
                     "wrapAndUnwrapSol": true
                 }
                 """.trimIndent()
             )
         }
+        println("response $response")
         return json.decodeFromString(SwapResponse.serializer(), response.bodyAsText())
     }
 
