@@ -2,10 +2,7 @@ package com.bswap.server
 
 import com.bswap.server.data.dexscreener.DexScreenerClientImpl
 import com.bswap.server.data.dexscreener.DexScreenerRepository
-import com.bswap.server.data.solana.jito.JitoBundlerService
 import com.bswap.server.data.solana.pumpfun.PumpFunService
-import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
-import com.bswap.server.data.solana.transaction.DefaultTransactionExecutor
 import com.bswap.server.routes.apiRoute
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
@@ -27,7 +24,7 @@ import kotlinx.serialization.json.Json
 fun main() {
     PumpFunService.connect()
     val bot = SolanaTokenSwapBot()
-    bot.runDexScreenerSwap(tokenProfiles = false, tokenBoostedProfiles = false)
+    bot.runDexScreenerSwap(tokenBoostedProfiles = false)
     bot.observePumpFun(PumpFunService.observeEvents())
     embeddedServer(Netty, port = SERVER_PORT) {
         routing {

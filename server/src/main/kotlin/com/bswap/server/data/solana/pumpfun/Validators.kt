@@ -23,7 +23,7 @@ suspend fun isTokenValid(mint: String): Boolean = runCatching {
     //    println("Token $mint is not tradable!")
     //    return false
     //}
-    if (ageSeconds > 40) {
+    if (ageSeconds > 20) {
         println("Token $mint too old - creation time $ageSeconds seconds ago")
         return false
     }

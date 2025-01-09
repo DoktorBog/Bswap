@@ -10,6 +10,7 @@ import com.bswap.server.data.solana.transaction.DefaultTransactionExecutor
 import com.bswap.server.data.solana.transaction.TokenInfo
 import com.bswap.server.data.solana.transaction.createCloseAccountInstruction
 import com.bswap.server.data.solana.transaction.createSwapTransaction
+import com.bswap.server.data.solana.transaction.createTransactionWithInstructions
 import com.bswap.server.data.solana.transaction.executeSolTransaction
 import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.data.solana.transaction.getTokenAccountsByOwner
@@ -103,13 +104,13 @@ class SolanaTokenSwapBot(
             }
         }
 
-        // 3) Periodically clear the state map
-        scope.launch {
-            while (isActive) {
-                delay(config.clearMapIntervalMs)
-                stateMap.clear()
-            }
-        }
+        //// 3) Periodically clear the state map
+        //scope.launch {
+        //    while (isActive) {
+        //        delay(config.clearMapIntervalMs)
+        //        stateMap.clear()
+        //    }
+        //}
 
         // 4) Periodically remove tokens that have been TradePending > 30 seconds
         scope.launch {
@@ -289,12 +290,17 @@ class SolanaTokenSwapBot(
             it.account.data.parsed.info.tokenAmount.amount == "0"
         }?.take(config.zeroBalanceCloseBatch)?.let { zeroList ->
             runCatching {
-                executeSolTransaction(
-                    rpc,
-                    zeroList.map {
-                        createCloseAccountInstruction(PublicKey(it.pubkey), config.walletPublicKey)
-                    }
-                )
+                val instruction = zeroList.map {
+                    createCloseAccountInstruction(PublicKey(it.pubkey), config.walletPublicKey)
+                }
+                if (config.useJito) {
+                    jitoBundlerService.enqueue(createTransactionWithInstructions(instruction).serialize())
+                } else {
+                    executeSolTransaction(
+                        rpc,
+                        instruction
+                    )
+                }
             }
         }
     }

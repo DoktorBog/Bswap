@@ -24,8 +24,8 @@ class JitoBundlerService(
     private val client: HttpClient,
     private val jitoFeeLamports: Long,
     private val tipAccounts: List<String>,
-    private val flushIntervalMs: Long = 5_000, // how often the flush loop runs
-    private val batchSize: Int = 4 // how many transactions per bundle (excluding tip)
+    private val flushIntervalMs: Long = 10_000, // how often the flush loop runs
+    private val batchSize: Int = 5 // how many transactions per bundle (excluding tip)
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

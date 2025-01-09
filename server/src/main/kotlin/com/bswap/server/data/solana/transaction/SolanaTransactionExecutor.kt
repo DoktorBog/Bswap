@@ -2,6 +2,7 @@ package com.bswap.server.data.solana.transaction
 
 import com.bswap.server.data.formatLamports
 import com.bswap.server.privateKey
+import com.bswap.server.rpc
 import com.metaplex.signer.Signer
 import foundation.metaplex.base58.decodeBase58
 import foundation.metaplex.base58.encodeToBase58String
@@ -70,16 +71,13 @@ suspend fun executeSolTransaction(
     transactionExecutor.executeAndConfirm(transaction)
 }
 
-suspend fun executeSolTransaction(
-    rpc: RPC,
+suspend fun createTransactionWithInstructions(
     transactionInstruction: List<TransactionInstruction>,
-    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
-) {
-
+): Transaction {
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
     val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
     val latestBlockhash = rpc.getLatestBlockhash(null)
-    val transaction: Transaction = SolanaTransactionBuilder()
+    return SolanaTransactionBuilder()
         .apply {
             for (instruction in transactionInstruction.take(9)) {
                 addInstruction(instruction)
@@ -87,7 +85,14 @@ suspend fun executeSolTransaction(
         }
         .setRecentBlockHash(latestBlockhash.blockhash)
         .setSigners(listOf(signer)).build()
-    transactionExecutor.executeAndConfirm(transaction)
+}
+
+suspend fun executeSolTransaction(
+    rpc: RPC,
+    transactionInstruction: List<TransactionInstruction>,
+    transactionExecutor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
+) {
+    transactionExecutor.executeAndConfirm(createTransactionWithInstructions(transactionInstruction))
 }
 
 suspend fun createSolTransaction(
