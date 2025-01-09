@@ -18,6 +18,7 @@ import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -38,15 +39,16 @@ fun main() {
 fun SolanaTokenSwapBot.runDexScreenerSwap(
     tokenProfiles: Boolean = true,
     tokenBoostedProfiles: Boolean = true,
+    maxTokens: Int = 10,
 ) {
     GlobalScope.launch {
         delay(3_000)
         if (tokenProfiles) {
-            observeProfiles(dexScreenerRepository.tokenProfilesFlow)
+            observeProfiles(dexScreenerRepository.tokenProfilesFlow.take(maxTokens))
         }
         if (tokenBoostedProfiles) {
-            observeBoosted(dexScreenerRepository.latestBoostedTokensFlow)
-            observeBoosted(dexScreenerRepository.topBoostedTokensFlow)
+            observeBoosted(dexScreenerRepository.latestBoostedTokensFlow.take(maxTokens))
+            observeBoosted(dexScreenerRepository.topBoostedTokensFlow.take(maxTokens))
         }
         dexScreenerRepository.apply {
             if (tokenProfiles) {
