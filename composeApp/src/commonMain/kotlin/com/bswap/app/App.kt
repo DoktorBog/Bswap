@@ -20,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bswap.app.components.AssetItem
+import com.bswap.app.components.CurrencyWidget
+import com.bswap.app.models.ExchangeRateViewModel
 import com.bswap.app.models.TokenViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -31,9 +33,18 @@ fun App() {
     val viewModel: TokenViewModel = viewModel { TokenViewModel(client) }
     val tokens by viewModel.tokens.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+
+    val rateViewModel: ExchangeRateViewModel = viewModel { ExchangeRateViewModel(client) }
+    val rate by rateViewModel.rate.collectAsState()
+    val lastFetched by rateViewModel.lastFetched.collectAsState()
+    val priceLoading by rateViewModel.isLoading.collectAsState()
+
     val pullRefreshState = rememberPullRefreshState(
-        refreshing = isLoading,
-        onRefresh = viewModel::fetchTokens
+        refreshing = isLoading || priceLoading,
+        onRefresh = {
+            viewModel.fetchTokens()
+            rateViewModel.fetchRates()
+        }
     )
     MaterialTheme {
         Scaffold(
@@ -51,6 +62,9 @@ fun App() {
                     .pullRefresh(pullRefreshState)
             ) {
                 LazyColumn {
+                    item {
+                        CurrencyWidget(rate = rate, lastFetched = lastFetched)
+                    }
                     items(tokens) { token ->
                         AssetItem(
                             asset = token,
@@ -61,7 +75,7 @@ fun App() {
                     }
                 }
                 PullRefreshIndicator(
-                    refreshing = isLoading,
+                    refreshing = isLoading || priceLoading,
                     state = pullRefreshState,
                     modifier = Modifier.align(Alignment.TopCenter),
                 )
