@@ -31,11 +31,25 @@ fun createCloseAccountInstruction(
     return TransactionInstruction(
         programId = SolanaPublicKey(Base58.decode(programId.base58())),
         keys = listOf(
-            AccountMeta(SolanaPublicKey(Base58.decode(tokenAccount.base58())), isSigner = false, isWritable = true),
-            AccountMeta(SolanaPublicKey(Base58.decode(destination.base58())), isSigner = false, isWritable = true),
-            AccountMeta(SolanaPublicKey(Base58.decode(destination.base58())), isSigner = true, isWritable = false),
+            AccountMeta(
+                SolanaPublicKey(Base58.decode(tokenAccount.base58())),
+                isSigner = false,
+                isWritable = true
+            ),
+            AccountMeta(
+                SolanaPublicKey(Base58.decode(destination.base58())),
+                isSigner = false,
+                isWritable = true
+            ),
+            AccountMeta(
+                SolanaPublicKey(Base58.decode(destination.base58())),
+                isSigner = true,
+                isWritable = false
+            ),
         ),
-        data = ByteArray(8) { 9.toByte() }
+        // The SPL token program expects a single byte instruction id for
+        // `CloseAccount`. Using 8 bytes caused malformed transactions.
+        data = byteArrayOf(9.toByte())
     )
 }
 
