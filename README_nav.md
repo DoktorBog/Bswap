@@ -1,6 +1,6 @@
 # Bswap Navigation
 
-This module uses the experimental **Navigation 3** API across platforms with a shared `Navigator` implementation.
+This module uses `navigation-compose` on Android and a simple state driven router on Desktop and Web.
 
 ```
 OnboardingWelcomeScreen --start--> ChoosePathScreen
@@ -9,9 +9,9 @@ OnboardingWelcomeScreen --start--> ChoosePathScreen
 WalletHomeScreen --menu--> AccountSettingsScreen --"Logout"--> OnboardingWelcomeScreen
 ```
 
-Example of pushing the generate seed screen:
+Example of navigating to `GenerateSeedScreen` from the welcome screen:
 
 ```kotlin
-navigator.push(NavKey.GenerateSeed)
+navController.navigateToGenerateSeed()
 ```
 TODO: add GIF demo of the flow

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.bswap.navigation.NavRoute
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
@@ -25,7 +26,7 @@ fun ChoosePathScreen(
         modifier = modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .testTag("ChoosePath"),
+            .testTag(NavRoute.ONBOARD_CHOOSE),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         UiButton(text = "Create", onClick = onCreate, modifier = Modifier.fillMaxWidth())

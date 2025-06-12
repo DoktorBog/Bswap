@@ -2,7 +2,7 @@ package com.bswap.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.bswap.navigation3.BswapNavHost
+import com.bswap.navigation.BswapNavHost
 import com.bswap.ui.UiTheme
 
 /**

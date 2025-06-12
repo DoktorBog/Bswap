@@ -25,9 +25,6 @@ sol4k = "0.5.4"
 kotlinx-datetime = "0.5.0"
 navigation-compose = "2.8.0"
 accompanist-navigation-animation = "0.36.0"
-navigation3 = "3.0.0-alpha02"
-navigation3-ui = "3.0.0-alpha02"
-compose-animation = "1.6.10"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -46,9 +43,6 @@ androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanist-navigation-animation" }
-androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
-androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3-ui" }
-androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "compose-animation" }
 
 
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
