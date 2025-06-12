@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bswap.app.components.AssetItem
 import com.bswap.app.components.CurrencyWidget
+import com.bswap.ui.UiTheme
 import com.bswap.app.models.ExchangeRateViewModel
 import com.bswap.app.models.TokenViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -46,7 +47,7 @@ fun App() {
             rateViewModel.fetchRates()
         }
     )
-    MaterialTheme {
+    UiTheme {
         Scaffold(
             topBar = {
                 TopAppBar(

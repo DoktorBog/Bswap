@@ -44,3 +44,7 @@
    ```bash
    ./gradlew server:run
 
+
+## Compose UI
+
+The `composeApp` module contains reusable Jetpack Compose widgets under `com.bswap.ui`. They adapt their colors through `UiTheme` and can be reused across the application. See [composeApp/README.md](composeApp/README.md) for the list of available components and a brief overview of Compose 1.7 features.
