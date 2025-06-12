@@ -1,0 +1,29 @@
+package com.bswap.ui
+
+import androidx.compose.material.RadioButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import org.jetbrains.compose.ui.tooling.preview.Preview
+
+@Composable
+fun UiRadioButton(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    RadioButton(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled
+    )
+}
+
+@Preview
+@Composable
+fun UiRadioButtonPreview() {
+    UiTheme {
+        UiRadioButton(selected = true, onClick = {})
+    }
+}
