@@ -1,10 +1,12 @@
 package com.bswap.ui
 
 import androidx.compose.material.Card
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun UiCard(
@@ -18,3 +20,13 @@ fun UiCard(
         content = content
     )
 }
+
+@Preview
+@Composable
+fun UiCardPreview() {
+    UiTheme {
+        UiCard { Text("Card content") }
+    }
+}
+
+

@@ -1,32 +1,30 @@
 package com.bswap.ui
 
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
+import androidx.compose.material.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
-fun UiTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
+fun UiSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    label: String? = null
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f
 ) {
-    OutlinedTextField(
+    Slider(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
-        label = label?.let { { Text(it) } }
+        valueRange = valueRange
     )
 }
 
 @Preview
 @Composable
-fun UiTextFieldPreview() {
+fun UiSliderPreview() {
     UiTheme {
-        UiTextField(value = "", onValueChange = {}, label = "Label")
+        UiSlider(value = 0.5f, onValueChange = {})
     }
 }
-
 

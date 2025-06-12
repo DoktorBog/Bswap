@@ -5,6 +5,7 @@ import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun UiButton(
@@ -22,3 +23,12 @@ fun UiButton(
         Text(text)
     }
 }
+
+@Preview
+@Composable
+fun UiButtonPreview() {
+    UiTheme {
+        UiButton(text = "Button", onClick = {})
+    }
+}
+
