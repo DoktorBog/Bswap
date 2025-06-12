@@ -31,7 +31,7 @@ fun AccountSettingsScreen(
     LazyColumn(
         modifier = modifier
             .padding(16.dp)
-            .testTag("AccountSettingsScreen"),
+            .testTag("AccountSettings"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(items) { (title, callback) ->

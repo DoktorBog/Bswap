@@ -32,7 +32,7 @@ fun ConfirmSeedScreen(
     Column(
         modifier = modifier
             .padding(16.dp)
-            .testTag("ConfirmSeedScreen"),
+            .testTag("ConfirmSeed"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         LazyVerticalGrid(
