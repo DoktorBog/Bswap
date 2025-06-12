@@ -3,15 +3,18 @@ package com.bswap.app
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.bswap.navigation.BswapNavHost
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.rememberBackStack
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.ui.UiTheme
 
 /**
  * Entry composable launching the Bswap navigation flow.
  */
 @Composable
-fun ComposeApp() {
+fun ComposeApp(backStack: SnapshotStateList<NavKey> = rememberBackStack()) {
     UiTheme {
-        BswapNavHost()
+        BswapNavHost(backStack)
     }
 }
 

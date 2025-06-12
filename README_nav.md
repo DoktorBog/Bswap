@@ -1,6 +1,6 @@
 # Bswap Navigation
 
-This module uses `navigation-compose` on Android and a simple state driven router on Desktop and Web.
+Navigation is powered by the multiplatform **Navigation 3** library. All targets share a single back stack stored in `rememberBackStack()`.
 
 ```
 OnboardingWelcomeScreen --start--> ChoosePathScreen
@@ -9,9 +9,9 @@ OnboardingWelcomeScreen --start--> ChoosePathScreen
 WalletHomeScreen --menu--> AccountSettingsScreen --"Logout"--> OnboardingWelcomeScreen
 ```
 
-Example of navigating to `GenerateSeedScreen` from the welcome screen:
+To move forward push a new `NavKey` onto the stack:
 
 ```kotlin
-navController.navigateToGenerateSeed()
+backStack.push(NavKey.GenerateSeed)
 ```
 TODO: add GIF demo of the flow

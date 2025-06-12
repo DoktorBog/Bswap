@@ -10,7 +10,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavRoute
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.rememberBackStack
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.bswap.navigation.push
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
@@ -19,21 +23,18 @@ import com.bswap.ui.UiTheme
 /**
  * Screen displaying generated seed phrase.
  *
- * @param seedWords ordered seed words
- * @param onCopy invoked when Copy button pressed
- * @param onNext invoked when Next button pressed
+ * @param backStack navigation back stack
  */
 @Composable
 fun GenerateSeedScreen(
-    seedWords: List<String>,
-    onCopy: () -> Unit,
-    onNext: () -> Unit,
+    backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
+    val seedWords = remember { List(12) { "word${'$'}{it + 1}" } }
     Column(
         modifier = modifier
             .padding(16.dp)
-            .testTag(NavRoute.GENERATE_SEED),
+            .testTag(NavKey.GenerateSeed::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         LazyColumn(modifier = Modifier.weight(1f)) {
@@ -41,8 +42,8 @@ fun GenerateSeedScreen(
                 SeedWordChip(word = word, focused = false, onClick = {})
             }
         }
-        UiButton(text = "Copy", onClick = onCopy, modifier = Modifier.fillMaxWidth())
-        UiButton(text = "Next", onClick = onNext, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Copy", onClick = {}, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Next", onClick = { backStack.push(NavKey.ConfirmSeed(seedWords)) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -50,6 +51,6 @@ fun GenerateSeedScreen(
 @Composable
 private fun GenerateSeedScreenPreview() {
     UiTheme {
-        GenerateSeedScreen(seedWords = List(12) { "word${it+1}" }, onCopy = {}, onNext = {})
+        GenerateSeedScreen(rememberBackStack())
     }
 }

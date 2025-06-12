@@ -9,7 +9,10 @@ import androidx.compose.material3.ListItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavRoute
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.rememberBackStack
+import com.bswap.navigation.replaceAll
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
@@ -19,11 +22,12 @@ import com.bswap.ui.UiTheme
  */
 @Composable
 fun AccountSettingsScreen(
-    onExportSeed: () -> Unit,
-    onChangeLanguage: () -> Unit,
-    onLogout: () -> Unit,
+    backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
+    val onExportSeed = {}
+    val onChangeLanguage = {}
+    val onLogout = { backStack.replaceAll(NavKey.Welcome) }
     val items = listOf(
         "Export Seed" to onExportSeed,
         "Change Language" to onChangeLanguage,
@@ -32,7 +36,7 @@ fun AccountSettingsScreen(
     LazyColumn(
         modifier = modifier
             .padding(16.dp)
-            .testTag(NavRoute.ACCOUNT_SETTINGS),
+            .testTag(NavKey.AccountSettings::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(items) { (title, callback) ->
@@ -51,6 +55,6 @@ fun AccountSettingsScreen(
 @Composable
 private fun AccountSettingsScreenPreview() {
     UiTheme {
-        AccountSettingsScreen(onExportSeed = {}, onChangeLanguage = {}, onLogout = {})
+        AccountSettingsScreen(rememberBackStack())
     }
 }
