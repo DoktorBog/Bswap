@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
     application
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("plugin.serialization") version "1.9.24"
 }
 
 group = "com.bswap.server"

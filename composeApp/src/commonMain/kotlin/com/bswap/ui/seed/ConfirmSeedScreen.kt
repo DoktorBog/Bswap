@@ -11,7 +11,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavRoute
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.rememberBackStack
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.bswap.navigation.replaceAll
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
@@ -21,19 +24,19 @@ import com.bswap.ui.UiTheme
  * Screen for confirming seed phrase order via drag and drop.
  *
  * @param words shuffled seed words
- * @param onConfirm enabled when order is correct
+ * @param backStack navigation back stack
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConfirmSeedScreen(
     words: List<String>,
-    onConfirm: () -> Unit,
+    backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .padding(16.dp)
-            .testTag(NavRoute.CONFIRM_SEED),
+            .testTag(NavKey.ConfirmSeed::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         LazyVerticalGrid(
@@ -50,7 +53,7 @@ fun ConfirmSeedScreen(
         }
         UiButton(
             text = "Confirm",
-            onClick = onConfirm,
+            onClick = { backStack.replaceAll(NavKey.WalletHome("pubKey")) },
             modifier = Modifier.fillMaxWidth(),
             enabled = false
         )
@@ -61,6 +64,6 @@ fun ConfirmSeedScreen(
 @Composable
 private fun ConfirmSeedScreenPreview() {
     UiTheme {
-        ConfirmSeedScreen(words = List(12) { "word${it+1}" }, onConfirm = {})
+        ConfirmSeedScreen(words = List(12) { "word${it+1}" }, backStack = rememberBackStack())
     }
 }

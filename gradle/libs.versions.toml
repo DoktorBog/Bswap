@@ -1,11 +1,11 @@
 [versions]
 agp = "8.5.2"
 junit = "4.13.2"
-kotlin = "2.1.0"
+kotlin = "1.9.24"
 ktor = "3.0.2"
 logback = "1.5.11"
 kotlinx-html = "0.11.0"
-kotlin-serealization = "v1.8.0-RC"
+kotlin-serealization = "1.6.3"
 android-compileSdk = "34"
 android-minSdk = "24"
 android-targetSdk = "34"
@@ -17,14 +17,13 @@ androidx-espresso-core = "3.6.1"
 androidx-lifecycle = "2.8.3"
 androidx-material = "1.12.0"
 androidx-test-junit = "1.2.1"
-compose-multiplatform = "1.7.0"
+compose-multiplatform = "1.6.10"
 kotlinx-coroutines = "1.9.0"
 coil3 = "3.0.4"
 metaplex = "0.3.0-beta1"
 sol4k = "0.5.4"
 kotlinx-datetime = "0.5.0"
-navigation-compose = "2.8.0"
-accompanist-navigation-animation = "0.36.0"
+navigation3 = "3.0.0-alpha02"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -41,8 +40,8 @@ androidx-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecy
 androidx-lifecycle-viewmodel = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "org.jetbrains.androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
 kotlinx-coroutines-swing = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
-androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
-accompanist-navigation-animation = { module = "com.google.accompanist:accompanist-navigation-animation", version.ref = "accompanist-navigation-animation" }
+androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
 
 
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }

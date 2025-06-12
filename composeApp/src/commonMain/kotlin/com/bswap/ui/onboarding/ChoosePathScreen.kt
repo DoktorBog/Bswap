@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavRoute
+import com.bswap.navigation.NavKey
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import com.bswap.navigation.rememberBackStack
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
@@ -18,19 +20,18 @@ import com.bswap.ui.UiTheme
  */
 @Composable
 fun ChoosePathScreen(
-    onCreate: () -> Unit,
-    onImport: () -> Unit,
+    backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .testTag(NavRoute.ONBOARD_CHOOSE),
+            .testTag(NavKey.ChoosePath::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        UiButton(text = "Create", onClick = onCreate, modifier = Modifier.fillMaxWidth())
-        UiButton(text = "Import", onClick = onImport, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Create", onClick = { backStack.push(NavKey.GenerateSeed) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Import", onClick = { backStack.push(NavKey.ImportWallet) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -38,6 +39,6 @@ fun ChoosePathScreen(
 @Composable
 private fun ChoosePathScreenPreview() {
     UiTheme {
-        ChoosePathScreen(onCreate = {}, onImport = {})
+        ChoosePathScreen(rememberBackStack())
     }
 }
