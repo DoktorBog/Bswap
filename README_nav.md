@@ -1,6 +1,12 @@
 # Bswap Navigation
 
-This module uses `navigation-compose` on Android and a simple state driven router on Desktop and Web.
+Navigation is powered by the multiplatform **Navigation&nbsp;3** library. All platforms
+use the same `NavKey` sealed hierarchy and a single back stack returned by
+`rememberBackStack()`.
+
+Each screen receives the back stack so it can push new keys or pop the current
+one. This approach works on Android, Desktop and WASM/JS without any platform
+specific code.
 
 ```
 OnboardingWelcomeScreen --start--> ChoosePathScreen
@@ -9,9 +15,11 @@ OnboardingWelcomeScreen --start--> ChoosePathScreen
 WalletHomeScreen --menu--> AccountSettingsScreen --"Logout"--> OnboardingWelcomeScreen
 ```
 
-Example of navigating to `GenerateSeedScreen` from the welcome screen:
+To move forward push a new `NavKey` onto the stack:
 
 ```kotlin
-navController.navigateToGenerateSeed()
+backStack.push(NavKey.GenerateSeed)
 ```
-TODO: add GIF demo of the flow
+
+The back stack persists across configuration changes thanks to
+`rememberSaveable`, so your screen state survives rotations automatically.

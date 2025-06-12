@@ -10,7 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavRoute
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.rememberBackStack
+import com.bswap.navigation.push
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
@@ -25,8 +28,8 @@ import com.bswap.ui.tx.TransactionRow
 @Composable
 fun WalletHomeScreen(
     publicKey: String,
-    modifier: Modifier = Modifier,
-    onSettings: () -> Unit = {}
+    backStack: SnapshotStateList<NavKey>,
+    modifier: Modifier = Modifier
 ) {
     val txs = remember {
         listOf(
@@ -38,7 +41,7 @@ fun WalletHomeScreen(
         modifier = modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .testTag(NavRoute.WALLET_HOME),
+            .testTag(NavKey.WalletHome::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         BalanceCard(solBalance = "0 SOL", tokensValue = "$0", isLoading = false)
@@ -55,6 +58,7 @@ fun WalletHomeScreen(
 @Composable
 private fun WalletHomeScreenPreview() {
     UiTheme {
-        WalletHomeScreen(publicKey = "ABCD")
+        val stack = rememberBackStack(NavKey.WalletHome("ABCD"))
+        WalletHomeScreen(publicKey = "ABCD", backStack = stack)
     }
 }

@@ -1,28 +1,20 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("plugin.serialization") version "1.9.24"
 }
 
 kotlin {
-    androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
+    androidTarget()
+    jvmToolchain(17)
     
     jvm("desktop")
-    
-    @OptIn(ExperimentalWasmDsl::class)
+
     wasmJs {
         moduleName = "composeApp"
         browser {
@@ -44,13 +36,13 @@ kotlin {
     
     sourceSets {
         val desktopMain by getting
+        val wasmJsMain by getting
         
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.androidx.navigation.compose)
-            implementation(libs.accompanist.navigation.animation)
+            implementation(libs.kotlinx.serialization.json)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -67,20 +59,25 @@ kotlin {
             implementation(libs.ktor.client.content.negotiation)
             // Ktor Client for HTTP Requests
             implementation(libs.ktor.client.core)
+            implementation(libs.kotlinx.serialization.json)
             implementation(libs.coil.compose.core)
             implementation(libs.coil.compose)
             implementation(libs.coil.mp)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.androidx.navigation3.runtime)
+            implementation(libs.androidx.navigation3.ui)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
+            implementation(libs.kotlinx.serialization.json)
         }
 
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.ktor.client.cio)
+            implementation(libs.kotlinx.serialization.json)
         }
     }
 }
@@ -107,8 +104,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
