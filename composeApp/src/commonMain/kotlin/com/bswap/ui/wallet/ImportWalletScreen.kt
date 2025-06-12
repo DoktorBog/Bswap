@@ -27,7 +27,7 @@ fun ImportWalletScreen(
     Column(
         modifier = modifier
             .padding(16.dp)
-            .testTag("ImportWalletScreen"),
+            .testTag("ImportWallet"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SeedInputField(value = text, onValueChange = setText, modifier = Modifier.fillMaxWidth())

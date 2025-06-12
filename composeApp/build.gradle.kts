@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     kotlin("plugin.serialization") version "2.1.0"
+    id("kotlin-parcelize")
 }
 
 kotlin {
@@ -49,6 +50,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.androidx.compose.animation)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -57,7 +59,7 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation("org.jetbrains.compose.components:components-ui-tooling-preview:${libs.versions.compose.multiplatform.get()}")
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtime.compose)
@@ -70,6 +72,8 @@ kotlin {
             implementation(libs.coil.mp)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.androidx.navigation3.runtime)
+            implementation(libs.androidx.navigation3.ui)
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)

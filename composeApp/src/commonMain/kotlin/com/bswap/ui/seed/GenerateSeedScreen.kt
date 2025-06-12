@@ -32,7 +32,7 @@ fun GenerateSeedScreen(
     Column(
         modifier = modifier
             .padding(16.dp)
-            .testTag("GenerateSeedScreen"),
+            .testTag("GenerateSeed"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         LazyColumn(modifier = Modifier.weight(1f)) {
