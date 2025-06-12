@@ -1,6 +1,6 @@
 package com.bswap.ui
 
-import androidx.compose.material.Slider
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.ui.tooling.preview.Preview

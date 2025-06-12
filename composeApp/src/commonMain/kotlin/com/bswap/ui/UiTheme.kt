@@ -1,14 +1,16 @@
 package com.bswap.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.darkColors
-import androidx.compose.material.lightColors
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
-private val DarkColorPalette = darkColors(
+private val DarkColorPalette = darkColorScheme(
     primary = Color(0xFFBB86FC),
     secondary = Color(0xFF03DAC5),
     background = Color(0xFF121212),
@@ -19,7 +21,7 @@ private val DarkColorPalette = darkColors(
     onSurface = Color.White,
 )
 
-private val LightColorPalette = lightColors(
+private val LightColorPalette = lightColorScheme(
     primary = Color(0xFF6200EE),
     secondary = Color(0xFF03DAC5),
     background = Color(0xFFFFFFFF),
@@ -32,11 +34,11 @@ private val LightColorPalette = lightColors(
 
 @Composable
 fun UiTheme(
-    background: Color = MaterialTheme.colors.background,
+    background: Color = MaterialTheme.colorScheme.background,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val useDarkColors = if (background != MaterialTheme.colors.background) {
+    val useDarkColors = if (background != MaterialTheme.colorScheme.background) {
         background.luminance() < 0.5f
     } else {
         darkTheme
@@ -49,9 +51,9 @@ fun UiTheme(
     }
 
     MaterialTheme(
-        colors = colors,
-        typography = MaterialTheme.typography,
-        shapes = MaterialTheme.shapes,
+        colorScheme = colors,
+        typography = Typography(),
+        shapes = Shapes(),
         content = content
     )
 }

@@ -1,6 +1,6 @@
 package com.bswap.ui
 
-import androidx.compose.material.Checkbox
+import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.ui.tooling.preview.Preview
