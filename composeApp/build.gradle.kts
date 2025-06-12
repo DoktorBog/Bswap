@@ -49,6 +49,8 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.androidx.navigation.compose)
+            implementation(libs.accompanist.navigation.animation)
         }
         commonMain.dependencies {
             implementation(compose.runtime)

@@ -43,8 +43,12 @@
 3. **Build** the project:
    ```bash
    ./gradlew server:run
+   ```
 
-
+   To run the Compose UI in your browser, execute:
+   ```bash
+   ./gradlew :composeApp:wasmJsBrowserProductionRun
+   ```
 ## Compose UI
 
 The `composeApp` module contains reusable Jetpack Compose widgets under `com.bswap.ui`. They adapt their colors through `UiTheme` and can be reused across the application. See [composeApp/README.md](composeApp/README.md) for the list of available components and a brief overview of Compose 1.7 features.
