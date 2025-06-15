@@ -8,7 +8,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberAlertDialogState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,11 +35,9 @@ fun SeedRevealDialog(
     modifier: Modifier = Modifier
 ) {
     var revealed by remember { mutableStateOf(false) }
-    val state = rememberAlertDialogState(onDismissRequest = onDismiss)
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        state = state,
         modifier = modifier.testTag("SeedRevealDialog")
     ) {
         Surface(

@@ -1,10 +1,10 @@
 package com.bswap.navigation
 
 import kotlinx.serialization.Serializable
-import androidx.compose.runtime.saveable.Parcelable
+
 
 @Serializable
-sealed interface NavKey : Parcelable {
+sealed interface NavKey {
     @Serializable object Welcome : NavKey
     @Serializable object ChoosePath : NavKey
     @Serializable object GenerateSeed : NavKey
