@@ -13,8 +13,7 @@ import com.bswap.navigation.rememberBackStack
 import com.bswap.navigation.push
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.PrimaryButton
-import com.bswap.ui.SecondaryButton
+import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
 
 /**
@@ -32,8 +31,8 @@ fun ChoosePathScreen(
             .testTag(NavKey.ChoosePath::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        PrimaryButton(text = "Create", onClick = { backStack.push(NavKey.GenerateSeed) }, modifier = Modifier.fillMaxWidth())
-        SecondaryButton(text = "Import", onClick = { backStack.push(NavKey.ImportWallet) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Create", onClick = { backStack.push(NavKey.GenerateSeed) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Import", onClick = { backStack.push(NavKey.ImportWallet) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
