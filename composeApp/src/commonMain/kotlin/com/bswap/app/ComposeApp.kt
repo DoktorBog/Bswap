@@ -6,7 +6,7 @@ import com.bswap.navigation.BswapNavHost
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.rememberBackStack
 import com.bswap.ui.UiTheme
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.desktop.ui.tooling.preview.Preview
 
 /**
  * Entry composable launching the Bswap navigation flow.

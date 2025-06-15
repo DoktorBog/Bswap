@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.desktop.ui.tooling.preview.Preview
 
 @Composable
 fun UiCard(
