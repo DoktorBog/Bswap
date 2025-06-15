@@ -30,8 +30,8 @@
 
 ## Requirements
 
-- **Kotlin 1.7+** (or Java 11+)
-- **Gradle** (or Maven) for dependency management
+- **Kotlin 1.9+ with JDK 17**
+- **Gradle** (or Maven) for dependency management. Gradle's toolchain will automatically use JDK 17 if it is installed or configured.
 
 ## Installation
 
