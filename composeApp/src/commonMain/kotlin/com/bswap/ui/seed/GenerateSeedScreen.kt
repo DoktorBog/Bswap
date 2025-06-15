@@ -17,8 +17,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.push
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.TextButton
-import com.bswap.ui.PrimaryButton
+import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
 
 /**
@@ -43,8 +42,8 @@ fun GenerateSeedScreen(
                 SeedWordChip(word = word, focused = false, onClick = {})
             }
         }
-        TextButton(onClick = {}) { androidx.compose.material3.Text("Copy") }
-        PrimaryButton(text = "Next", onClick = { backStack.push(NavKey.ConfirmSeed(seedWords)) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Copy", onClick = {}, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Next", onClick = { backStack.push(NavKey.ConfirmSeed(seedWords)) }, modifier = Modifier.fillMaxWidth())
     }
 }
 
