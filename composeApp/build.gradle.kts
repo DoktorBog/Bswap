@@ -6,7 +6,8 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
-    kotlin("plugin.serialization") version "1.9.24"
+    alias(libs.plugins.composeCompiler)
+    kotlin("plugin.serialization") version "2.1.21"
 }
 
 kotlin {
@@ -67,6 +68,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.androidx.navigation3.runtime)
             implementation(libs.androidx.navigation3.ui)
+            implementation(project(":shared"))
         }
         wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)

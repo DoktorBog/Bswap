@@ -182,9 +182,10 @@ class SolanaTokenSwapBot(
             runCatching {
                 // Attempt the Jupiter swap
                 jupiterSwapService.getQuoteAndPerformSwap(
-                    config.solAmountToTrade,
+                    config.solAmountToTrade.toPlainString(),
                     config.swapMint.base58(),
-                    mint
+                    mint,
+                    config.walletPublicKey.base58()
                 )
             }.onSuccess { swap ->
                 // If Jupiter provided no instructions, remove it from map
@@ -239,7 +240,8 @@ class SolanaTokenSwapBot(
                 jupiterSwapService.getQuoteAndPerformSwap(
                     info.tokenAmount.amount,
                     mint,
-                    config.swapMint.base58()
+                    config.swapMint.base58(),
+                    config.walletPublicKey.base58()
                 )
             }.onSuccess { swap ->
                 if (swap.swapTransaction == null) {
@@ -321,7 +323,8 @@ class SolanaTokenSwapBot(
                     jupiterSwapService.getQuoteAndPerformSwap(
                         token.tokenAmount.amount,
                         token.mint,
-                        config.swapMint.base58()
+                        config.swapMint.base58(),
+                        config.walletPublicKey.base58()
                     )
                 }.onSuccess { swap ->
                     if (swap.swapTransaction == null) return@onSuccess
