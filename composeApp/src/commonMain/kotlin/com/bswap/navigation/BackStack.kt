@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.Composable
 
+@Composable
 fun rememberBackStack(start: NavKey = NavKey.Welcome): SnapshotStateList<NavKey> = rememberSaveable {
     mutableStateListOf(start)
 }
