@@ -16,7 +16,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.push
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiButton
+import com.bswap.ui.PrimaryButton
 import com.bswap.ui.UiTheme
 
 /**
@@ -38,7 +38,7 @@ fun OnboardingWelcomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Welcome to Bswap", style = MaterialTheme.typography.headlineMedium)
-        UiButton(text = "\u041d\u0430\u0447\u0430\u0442\u044c", onClick = { backStack.push(NavKey.ChoosePath) }, modifier = Modifier.fillMaxWidth())
+        PrimaryButton(text = "\u041d\u0430\u0447\u0430\u0442\u044c", onClick = { backStack.push(NavKey.ChoosePath) }, modifier = Modifier.fillMaxWidth())
     }
 }
 

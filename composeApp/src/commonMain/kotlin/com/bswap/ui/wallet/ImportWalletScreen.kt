@@ -15,7 +15,7 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.replaceAll
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiButton
+import com.bswap.ui.PrimaryButton
 import com.bswap.ui.UiTheme
 import com.bswap.ui.seed.SeedInputField
 
@@ -35,7 +35,7 @@ fun ImportWalletScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SeedInputField(value = text, onValueChange = setText, modifier = Modifier.fillMaxWidth())
-        UiButton(text = "Import", onClick = { backStack.replaceAll(NavKey.WalletHome("pubKey")) }, modifier = Modifier.fillMaxWidth())
+        PrimaryButton(text = "Import", onClick = { backStack.replaceAll(NavKey.WalletHome("pubKey")) }, modifier = Modifier.fillMaxWidth())
     }
 }
 

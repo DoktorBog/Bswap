@@ -1,9 +1,10 @@
 package com.bswap.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -11,25 +12,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 private val DarkColorPalette = darkColorScheme(
-    primary = Color(0xFFBB86FC),
-    secondary = Color(0xFF03DAC5),
-    background = Color(0xFF121212),
-    surface = Color(0xFF121212),
+    primary = UiColors.primaryForeground,
+    secondary = UiColors.accentGray,
+    background = UiColors.background,
+    surface = UiColors.surface,
     onPrimary = Color.Black,
     onSecondary = Color.Black,
-    onBackground = Color.White,
-    onSurface = Color.White,
+    onBackground = UiColors.primaryForeground,
+    onSurface = UiColors.primaryForeground,
 )
 
 private val LightColorPalette = lightColorScheme(
-    primary = Color(0xFF6200EE),
-    secondary = Color(0xFF03DAC5),
-    background = Color(0xFFFFFFFF),
-    surface = Color(0xFFFFFFFF),
-    onPrimary = Color.White,
+    primary = UiColors.primaryForeground,
+    secondary = UiColors.accentGray,
+    background = UiColors.background,
+    surface = UiColors.surface,
+    onPrimary = Color.Black,
     onSecondary = Color.Black,
-    onBackground = Color.Black,
-    onSurface = Color.Black,
+    onBackground = UiColors.primaryForeground,
+    onSurface = UiColors.primaryForeground,
 )
 
 @Composable
