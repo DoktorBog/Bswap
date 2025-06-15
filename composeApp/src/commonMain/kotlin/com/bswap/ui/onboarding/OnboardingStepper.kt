@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
@@ -68,7 +68,7 @@ private fun StepItem(text: String, active: Boolean, size: Dp = 16.dp) {
     }
 }
 
-@Preview(name = "Stepper", device = "id:pixel_4", showBackground = true)
+@Preview
 @Composable
 private fun OnboardingStepperPreview() {
     UiTheme {

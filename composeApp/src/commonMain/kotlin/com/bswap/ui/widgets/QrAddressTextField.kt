@@ -12,7 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.desktop.ui.tooling.preview.Preview
 import com.bswap.ui.UiTheme
 
 private val base58Regex = Regex("^[1-9A-HJ-NP-Za-km-z]+")
@@ -43,7 +43,7 @@ fun QrAddressTextField(
     )
 }
 
-@Preview(name = "QrAddressTextField", device = "id:pixel_4", showBackground = true)
+@Preview
 @Composable
 private fun QrAddressTextFieldPreview() {
     val (text, setText) = remember { mutableStateOf("") }

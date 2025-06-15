@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.desktop.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
 
@@ -45,7 +45,7 @@ fun TokenChip(
     }
 }
 
-@Preview(name = "TokenChip", device = "id:pixel_4", showBackground = true)
+@Preview
 @Composable
 private fun TokenChipPreview() {
     UiTheme {
