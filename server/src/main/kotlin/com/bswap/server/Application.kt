@@ -6,12 +6,20 @@ import com.bswap.server.data.solana.pumpfun.PumpFunService
 import com.bswap.server.routes.apiRoute
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
+import com.bswap.server.routes.walletRoutes
+import com.bswap.server.data.solana.jito.JitoBundlerService
+import com.bswap.server.data.solana.rpc.SolanaRpcClient
+import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
+import com.bswap.server.data.tokenlist.TokenListRepo
+import com.bswap.server.service.WalletService
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.networking.NetworkDriver
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.application.install
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -33,10 +41,14 @@ fun main() {
     )
     bot.observePumpFun(PumpFunService.observeEvents())
     embeddedServer(Netty, port = SERVER_PORT) {
+        install(ContentNegotiation) {
+            json(Json { ignoreUnknownKeys = true })
+        }
         routing {
             startRoute()
             tokensRoute(dexScreenerRepository.tokenProfilesFlow)
             apiRoute(dexScreenerRepository.tokenProfilesFlow)
+            walletRoutes(walletService)
         }
     }.start(wait = true)
 }
@@ -71,7 +83,7 @@ fun SolanaTokenSwapBot.runDexScreenerSwap(
 val client by lazy {
     HttpClient(CIO) {
         install(WebSockets)
-        install(ContentNegotiation) {
+        install(ClientContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
         }
     }
@@ -84,6 +96,26 @@ val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 val dexScreenerRepository = DexScreenerRepository(
     client = DexScreenerClientImpl(client),
     coroutineScope = appScope
+)
+
+val walletService = WalletService(
+    SolanaRpcClient(client),
+    TokenListRepo(client),
+    JupiterSwapService(client),
+    JitoBundlerService(
+        client = client,
+        jitoFeeLamports = 1000,
+        tipAccounts = listOf(
+            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
+            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
+            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
+            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
+            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
+        )
+    )
 )
 
 private fun createRPC(client: HttpClient) =
