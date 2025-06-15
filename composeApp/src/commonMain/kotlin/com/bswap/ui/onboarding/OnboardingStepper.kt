@@ -54,13 +54,13 @@ fun OnboardingStepper(
 
 @Composable
 private fun StepItem(text: String, active: Boolean, size: Dp = 16.dp) {
+    val color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     Row(verticalAlignment = Alignment.CenterVertically) {
         Canvas(
             modifier = Modifier
                 .padding(end = 4.dp)
                 .height(size)
         ) {
-            val color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
             drawCircle(color = Color.Transparent, radius = size.toPx() / 2, style = Stroke(width = 2.dp.toPx(), miter = 0f))
             drawCircle(color = color, radius = size.toPx() / 4)
         }

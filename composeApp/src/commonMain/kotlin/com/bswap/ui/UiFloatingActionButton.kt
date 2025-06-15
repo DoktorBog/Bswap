@@ -12,13 +12,11 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun UiFloatingActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     FloatingActionButton(
         onClick = onClick,
         modifier = modifier,
-        enabled = enabled,
         content = content
     )
 }

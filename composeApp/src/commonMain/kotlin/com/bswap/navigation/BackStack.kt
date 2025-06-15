@@ -2,11 +2,11 @@ package com.bswap.navigation
 
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 
 @Composable
-fun rememberBackStack(start: NavKey = NavKey.Welcome): SnapshotStateList<NavKey> = rememberSaveable {
+fun rememberBackStack(start: NavKey = NavKey.Welcome): SnapshotStateList<NavKey> = remember {
     mutableStateListOf(start)
 }
 

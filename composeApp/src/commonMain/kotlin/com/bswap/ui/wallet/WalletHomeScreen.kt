@@ -58,6 +58,6 @@ fun WalletHomeScreen(
 @Composable
 private fun WalletHomeScreenPreview() {
     UiTheme {
-        WalletHomeScreen(publicKey = "ABCD")
+        WalletHomeScreen(publicKey = "ABCD", backStack = rememberBackStack())
     }
 }

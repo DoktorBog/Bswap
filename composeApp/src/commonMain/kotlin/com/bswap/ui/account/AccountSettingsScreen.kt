@@ -9,6 +9,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.clickable
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.rememberBackStack
 import com.bswap.navigation.replaceAll
@@ -44,8 +45,8 @@ fun AccountSettingsScreen(
                 headlineContent = { androidx.compose.material3.Text(title) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                onClick = callback
+                    .padding(vertical = 4.dp)
+                    .clickable { callback() }
             )
         }
     }
