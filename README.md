@@ -40,6 +40,7 @@
    - **RPC endpoint**  
    - **JupiterSwapService**  
    - **JitoBundlerService** (if desired, set `useJito = true`)
+   - **Private key** via the `SOLANA_PRIVATE_KEY` environment variable or a `solana_private_key.txt` file
 3. **Build** the project:
    ```bash
    ./gradlew server:run
