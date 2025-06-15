@@ -4,6 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.statement.HttpResponse
+import com.bswap.server.config.ServerConfig
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 
@@ -19,7 +20,7 @@ class LogMonitorService(private val client: HttpClient) {
 
     suspend fun fetchLogs(): List<String> {
         // Replace this URL with the appropriate RPC or log-fetching API
-        val url = "https://api.mainnet-beta.solana.com"
+        val url = ServerConfig.logMonitorUrl
         val response: HttpResponse = client.get(url) {
             // Additional request parameters or authentication if needed
         }

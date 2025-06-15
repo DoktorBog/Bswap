@@ -1,5 +1,6 @@
 package com.bswap.server.data.solana.search.pool
 
+import com.bswap.server.config.ServerConfig
 import com.bswap.server.data.solana.search.pool.model.Pool
 import com.bswap.server.data.solana.search.pool.model.PoolResponse
 import io.ktor.client.HttpClient
@@ -17,8 +18,7 @@ class PoolMonitorService(private val client: HttpClient) {
     private val logger = LoggerFactory.getLogger(PoolMonitorService::class.java)
 
     suspend fun fetchPools(): List<Pool> {
-        val url =
-            "https://api-v3.raydium.io/pools/info/list?poolType=all&poolSortField=default&sortType=desc&pageSize=10&page=1"
+        val url = ServerConfig.poolMonitorUrl
         val response: HttpResponse = client.get(url)
         val parsedResponse = response.body<PoolResponse>()
         if (parsedResponse.success) {

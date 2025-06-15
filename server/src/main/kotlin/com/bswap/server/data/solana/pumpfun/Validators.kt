@@ -1,6 +1,7 @@
 package com.bswap.server.data.solana.pumpfun
 
 import com.bswap.server.client
+import com.bswap.server.config.ServerConfig
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import kotlinx.coroutines.delay
@@ -15,7 +16,7 @@ data class PumpFunResponse(
 
 suspend fun isTokenValid(mint: String): Boolean = runCatching {
     delay(10_000)
-    val apiUrl = "https://frontend-api.pump.fun/coins/$mint"
+    val apiUrl = "${ServerConfig.pumpFunBaseUrl}/$mint"
     val response: PumpFunResponse = client.get(apiUrl).body()
     val currentTime = System.currentTimeMillis()
     val ageSeconds = (currentTime - response.created_timestamp) / 1000
