@@ -1,5 +1,6 @@
 package com.bswap.server.data.solana.jito
 
+import com.bswap.server.config.ServerConfig
 import foundation.metaplex.base58.encodeToBase58String
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
@@ -34,15 +35,8 @@ class JitoBundlerService(
     // Queue to hold base58-encoded transactions until we bundle them
     private val txQueue = LinkedList<String>()
 
-    // Jito endpoints
-    private val endpoints = listOf(
-        "https://mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://slc.mainnet.block-engine.jito.wtf/api/v1/bundles"
-    )
+    // Jito endpoints can be customised via the JITO_BUNDLER_ENDPOINTS env variable
+    private val endpoints = ServerConfig.jitoBundlerEndpoints
 
     init {
         // 1) Background loop flushes the queue periodically

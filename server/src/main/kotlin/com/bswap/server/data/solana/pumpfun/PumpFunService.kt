@@ -1,6 +1,7 @@
 package com.bswap.server.data.solana.pumpfun
 
 import com.bswap.server.client
+import com.bswap.server.config.ServerConfig
 import com.bswap.server.data.ws.WebSocketState
 import io.ktor.client.plugins.websocket.DefaultClientWebSocketSession
 import io.ktor.client.plugins.websocket.webSocket
@@ -23,7 +24,7 @@ import kotlinx.serialization.json.jsonObject
 
 object PumpFunService {
 
-    private const val WS_URL = "wss://pumpportal.fun/api/data"
+    private val WS_URL = ServerConfig.pumpFunWsUrl
     private val eventFlow = MutableSharedFlow<TokenTradeResponse>()
     private val stateFlow = MutableStateFlow<WebSocketState>(WebSocketState.Disconnected)
     private val subscribedTokens = mutableSetOf<String>()

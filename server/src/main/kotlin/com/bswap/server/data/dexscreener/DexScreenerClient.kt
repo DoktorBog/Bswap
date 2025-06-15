@@ -1,5 +1,6 @@
 package com.bswap.server.data.dexscreener
 
+import com.bswap.server.config.ServerConfig
 import com.bswap.server.data.dexscreener.models.Order
 import com.bswap.server.data.dexscreener.models.PairsResponse
 import com.bswap.server.data.dexscreener.models.TokenBoost
@@ -19,13 +20,14 @@ interface DexScreenerClient {
     suspend fun searchPairs(query: String): PairsResponse
 }
 
-class DexScreenerClientImpl(private val httpClient: HttpClient) : DexScreenerClient {
-
-    private val tokenProfilesUrl = "https://api.dexscreener.com/token-profiles/latest/v1"
-    private val tokenBoostsLatestUrl = "https://api.dexscreener.com/token-boosts/latest/v1"
-    private val tokenBoostsTopUrl = "https://api.dexscreener.com/token-boosts/top/v1"
-    private val ordersBaseUrl = "https://api.dexscreener.com/orders/v1"
-    private val pairsBaseUrl = "https://api.dexscreener.com/latest/dex"
+class DexScreenerClientImpl(
+    private val httpClient: HttpClient,
+    private val tokenProfilesUrl: String = ServerConfig.dexTokenProfilesUrl,
+    private val tokenBoostsLatestUrl: String = ServerConfig.dexTokenBoostsLatestUrl,
+    private val tokenBoostsTopUrl: String = ServerConfig.dexTokenBoostsTopUrl,
+    private val ordersBaseUrl: String = ServerConfig.dexOrdersBaseUrl,
+    private val pairsBaseUrl: String = ServerConfig.dexPairsBaseUrl,
+) : DexScreenerClient {
 
     override suspend fun getTokenProfiles(): List<TokenProfile> =
         httpClient.get(tokenProfilesUrl).body()
