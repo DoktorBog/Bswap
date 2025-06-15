@@ -2,6 +2,7 @@ package com.bswap.server
 
 import foundation.metaplex.solanapublickeys.PublicKey
 import java.math.BigDecimal
+import java.io.File
 
 data class SolanaSwapBotConfig(
     val walletPublicKey: PublicKey = PublicKey(""),
@@ -18,5 +19,8 @@ data class SolanaSwapBotConfig(
     val useJito: Boolean = true
 )
 
-const val privateKey: String =
-    ""
+val privateKey: String by lazy {
+    System.getenv("SOLANA_PRIVATE_KEY")?.takeIf { it.isNotBlank() }
+        ?: runCatching { File("solana_private_key.txt").readText().trim() }.getOrNull()
+        ?: ""
+}
