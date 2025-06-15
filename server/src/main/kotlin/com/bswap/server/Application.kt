@@ -16,7 +16,9 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.launch
@@ -25,7 +27,10 @@ import kotlinx.serialization.json.Json
 fun main() {
     PumpFunService.connect()
     val bot = SolanaTokenSwapBot()
-    bot.runDexScreenerSwap(tokenBoostedProfiles = false)
+    bot.runDexScreenerSwap(
+        tokenBoostedProfiles = false,
+        coroutineScope = appScope
+    )
     bot.observePumpFun(PumpFunService.observeEvents())
     embeddedServer(Netty, port = SERVER_PORT) {
         routing {
@@ -40,8 +45,9 @@ fun SolanaTokenSwapBot.runDexScreenerSwap(
     tokenProfiles: Boolean = true,
     tokenBoostedProfiles: Boolean = true,
     maxTokens: Int = 10,
+    coroutineScope: CoroutineScope
 ) {
-    GlobalScope.launch {
+    coroutineScope.launch {
         delay(3_000)
         if (tokenProfiles) {
             observeProfiles(dexScreenerRepository.tokenProfilesFlow.take(maxTokens))
@@ -73,7 +79,12 @@ val client by lazy {
 
 val rpc = createRPC(client)
 
-val dexScreenerRepository = DexScreenerRepository(DexScreenerClientImpl(client))
+val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+val dexScreenerRepository = DexScreenerRepository(
+    client = DexScreenerClientImpl(client),
+    coroutineScope = appScope
+)
 
 private fun createRPC(client: HttpClient) =
     RPC(RPC_URL, NetworkDriver(client))

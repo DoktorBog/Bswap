@@ -5,7 +5,6 @@ import com.bswap.server.data.dexscreener.models.PairsResponse
 import com.bswap.server.data.dexscreener.models.TokenBoost
 import com.bswap.server.data.dexscreener.models.TokenProfile
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +18,7 @@ const val autoRefreshInterval = 5_000L
 class DexScreenerRepository(
     private val client: DexScreenerClient,
     private val rateLimiter: DexScreenerRateLimiter = DexScreenerRateLimiter(),
-    private val coroutineScope: CoroutineScope = GlobalScope
+    private val coroutineScope: CoroutineScope
 ) {
 
     fun startAutoRefreshAll(
