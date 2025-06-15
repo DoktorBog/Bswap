@@ -3,9 +3,10 @@ package com.bswap.app.components
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Card
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,10 +25,10 @@ fun CurrencyWidget(
         modifier = modifier
             .fillMaxWidth()
             .padding(8.dp),
-        elevation = 4.dp
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = "SOL Exchange Rates", style = MaterialTheme.typography.h6)
+            Text(text = "SOL Exchange Rates", style = MaterialTheme.typography.titleLarge)
             if (rate != null) {
                 Text(text = "USD: ${rate.usd}")
                 Text(text = "EUR: ${rate.eur}")
@@ -38,7 +39,7 @@ fun CurrencyWidget(
                 val localDateTime = it.toLocalDateTime(TimeZone.currentSystemDefault())
                 Text(
                     text = "Last updated: $localDateTime",
-                    style = MaterialTheme.typography.caption
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }

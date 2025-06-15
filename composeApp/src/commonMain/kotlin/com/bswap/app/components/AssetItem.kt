@@ -8,9 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.Card
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -29,7 +30,7 @@ fun AssetItem(
             .clickable {
                 openLink(asset.url)
             },
-        elevation = 4.dp
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
             AsyncImage(
@@ -39,11 +40,11 @@ fun AssetItem(
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = asset.tokenAddress, style = MaterialTheme.typography.h6)
-                Text(text = "Chain ID: ${asset.chainId}", style = MaterialTheme.typography.body2)
+                Text(text = asset.tokenAddress, style = MaterialTheme.typography.titleLarge)
+                Text(text = "Chain ID: ${asset.chainId}", style = MaterialTheme.typography.bodyMedium)
                 Text(
                     text = asset.description ?: "No Description",
-                    style = MaterialTheme.typography.body2
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }

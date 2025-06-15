@@ -38,26 +38,27 @@ fun SeedRevealDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {},
-        modifier = modifier.testTag("SeedRevealDialog")
-    ) {
-        Surface(
-            tonalElevation = 2.dp,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.animateContentSize()
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = modifier.testTag("SeedRevealDialog"),
+        text = {
+            Surface(
+                tonalElevation = 2.dp,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.animateContentSize()
             ) {
-                if (revealed) {
-                    Text(seed, fontWeight = FontWeight.Bold)
-                } else {
-                    UiButton(text = "Hold to reveal", onClick = {})
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (revealed) {
+                        Text(seed, fontWeight = FontWeight.Bold)
+                    } else {
+                        UiButton(text = "Hold to reveal", onClick = {})
+                    }
                 }
             }
         }
-    }
+    )
     LaunchedEffect(Unit) {
         delay(1500)
         revealed = true
