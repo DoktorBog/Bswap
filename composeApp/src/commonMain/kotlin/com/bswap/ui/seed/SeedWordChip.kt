@@ -2,8 +2,8 @@ package com.bswap.ui.seed
 
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberRipple
@@ -18,30 +18,30 @@ import com.bswap.ui.UiTheme
  * Single word of a seed phrase represented as a chip.
  *
  * @param word seed word text
- * @param focused whether chip is focused/dragged
+ * @param selected whether chip is part of the selected phrase
  * @param onClick callback on chip press
  */
 @Composable
 fun SeedWordChip(
     word: String,
-    focused: Boolean,
+    selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
-    val colors = FilterChipDefaults.filterChipColors(
-        containerColor = if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        labelColor = if (focused) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val border = AssistChipDefaults.assistChipBorder(
+        borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     )
-    FilterChip(
-        selected = focused,
+    AssistChip(
         onClick = onClick,
-        interactionSource = interactionSource,
         label = { Text(word) },
+        enabled = enabled,
+        interactionSource = interactionSource,
+        border = border,
         modifier = modifier
             .testTag("SeedWordChip")
-            .indication(interactionSource, rememberRipple()),
-        colors = colors
+            .indication(interactionSource, rememberRipple())
     )
 }
 
@@ -49,6 +49,6 @@ fun SeedWordChip(
 @Composable
 private fun SeedWordChipPreview() {
     UiTheme {
-        SeedWordChip(word = "solana", focused = false, onClick = {})
+        SeedWordChip(word = "solana", selected = false, onClick = {})
     }
 }

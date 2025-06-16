@@ -117,8 +117,12 @@ android {
     }
 }
 
+@OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
 dependencies {
     debugImplementation(compose.uiTooling)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(compose.uiTestJUnit4)
 }
 
     compose.desktop {

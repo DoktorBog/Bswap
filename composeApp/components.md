@@ -11,7 +11,7 @@ The `composeApp` module offers reusable Material components for building wallet 
 - **SeedInputField** – multiline seed phrase text field with validation.
 - **SeedWordChip** – chip displaying single seed word.
 - **GenerateSeedScreen** – screen for showing generated seed phrase.
-- **ConfirmSeedScreen** – drag and drop seed verification screen.
+- **ConfirmSeedScreen** – chip-based seed verification screen.
 - **ImportWalletScreen** – manual seed phrase input screen.
 - **AccountHeader** – avatar with shortened public key and copy action.
 - **AccountSettingsScreen** – basic settings list with export and logout options.
