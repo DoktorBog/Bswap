@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
+import com.bswap.app.copyToClipboard
 
 /**
  * Header displaying account avatar initials and short public key.
@@ -44,6 +45,13 @@ fun AccountHeader(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        UiButton(text = "Copy", onClick = onCopy, modifier = Modifier.size(60.dp))
+        UiButton(
+            text = "Copy",
+            onClick = {
+                copyToClipboard(publicKey)
+                onCopy()
+            },
+            modifier = Modifier.size(60.dp)
+        )
     }
 }
