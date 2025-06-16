@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.bswap.app.interactor.walletInteractor
 import com.bswap.app.models.ConfirmSeedViewModel
 import com.bswap.data.seedStorage
 import com.bswap.navigation.NavKey
@@ -51,7 +50,6 @@ fun ConfirmSeedScreen(
     val available = remember { mutableStateListOf(*mnemonic.shuffled().toTypedArray()) }
     val selected = remember { mutableStateListOf<String>() }
     val scope = rememberCoroutineScope()
-    val interactor = remember { walletInteractor() }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val complete = selected.size == mnemonic.size
@@ -121,7 +119,7 @@ fun ConfirmSeedScreen(
                         if (!SeedPhraseValidator.isValid(mnemonic, selected)) {
                             snackbarHostState.showSnackbar("Words do not match")
                         } else {
-                            val keypair = interactor.createWallet(mnemonic)
+                            val keypair = seedStorage().createWallet(mnemonic)
                             seedStorage().savePublicKey(keypair.publicKey.toBase58())
                             backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
                         }

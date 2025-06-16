@@ -1,7 +1,8 @@
 package com.bswap.seed
 
-import org.sol4k.Keypair
+import foundation.metaplex.solanaeddsa.Keypair
+import foundation.metaplex.solanaeddsa.SolanaEddsa
 
 object JitoService {
-    fun generateKeypair(): Keypair = Keypair.generate()
+    fun generateKeypair(): Keypair = SolanaEddsa.generateKeypair()
 }
