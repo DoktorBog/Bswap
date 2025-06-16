@@ -15,7 +15,7 @@ import com.bswap.server.service.WalletService
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.networking.NetworkDriver
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
@@ -81,7 +81,7 @@ fun SolanaTokenSwapBot.runDexScreenerSwap(
 }
 
 val client by lazy {
-    HttpClient(CIO) {
+    HttpClient(OkHttp) {
         install(WebSockets)
         install(ClientContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })

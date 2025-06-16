@@ -33,7 +33,7 @@ dependencies {
 
     // Ktor Client for HTTP Requests
     implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.okhttp)
 
     // Ktor Content Negotiation for JSON Parsing
     implementation(libs.ktor.client.content.negotiation)
