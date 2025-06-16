@@ -9,7 +9,10 @@ object SeedUtils {
         val sha = MessageDigest.getInstance("SHA-256").digest(entropy)
         val bits = entropy + byteArrayOf(sha[0])
         val bitString = bits.joinToString("") { byte ->
-            String.format("%8s", byte.toInt() and 0xFF) .replace(' ', '0')
+            String.format(
+                "%8s",
+                Integer.toBinaryString(byte.toInt() and 0xFF)
+            ).replace(' ', '0')
         }
         val words = mutableListOf<String>()
         for (i in 0 until 12) {
