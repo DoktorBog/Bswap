@@ -1,14 +1,17 @@
 package com.bswap.ui.seed
 
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberRipple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
 
 /**
@@ -23,16 +26,21 @@ fun SeedWordChip(
     word: String,
     focused: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
 ) {
-    val colors = AssistChipDefaults.assistChipColors(
+    val colors = FilterChipDefaults.filterChipColors(
         containerColor = if (focused) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
         labelColor = if (focused) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
     )
-    AssistChip(
+    FilterChip(
+        selected = focused,
         onClick = onClick,
+        interactionSource = interactionSource,
         label = { Text(word) },
-        modifier = modifier.testTag("SeedWordChip"),
+        modifier = modifier
+            .testTag("SeedWordChip")
+            .indication(interactionSource, rememberRipple()),
         colors = colors
     )
 }
