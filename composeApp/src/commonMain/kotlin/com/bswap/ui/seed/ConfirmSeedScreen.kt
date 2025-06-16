@@ -23,7 +23,6 @@ import com.bswap.ui.UiTheme
 import com.bswap.seed.SeedUtils
 import com.bswap.seed.JitoService
 import com.bswap.data.seedStorage
-import org.sol4k.toBase58
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.pointer.pointerInput
@@ -31,7 +30,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import androidx.compose.ui.input.pointer.consume
+import androidx.compose.ui.input.pointer.util.consume
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
