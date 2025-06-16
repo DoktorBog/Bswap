@@ -49,8 +49,8 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.kotlinx.serialization.json)
-            implementation(libs.androidx.datastore.preferences)
             implementation(libs.androidx.security.crypto)
+            implementation(libs.bitcoinj.core)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
