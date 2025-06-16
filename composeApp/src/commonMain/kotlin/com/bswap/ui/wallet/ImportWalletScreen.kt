@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.bswap.navigation.NavKey
@@ -18,6 +19,9 @@ import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
 import com.bswap.ui.seed.SeedInputField
+import com.bswap.app.interactor.walletInteractor
+import com.bswap.data.seedStorage
+import kotlinx.coroutines.launch
 
 /**
  * Screen for manual wallet import via seed phrase.
@@ -28,6 +32,8 @@ fun ImportWalletScreen(
     modifier: Modifier = Modifier
 ) {
     val (text, setText) = remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    val interactor = remember { walletInteractor() }
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -35,7 +41,19 @@ fun ImportWalletScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         SeedInputField(value = text, onValueChange = setText, modifier = Modifier.fillMaxWidth())
-        UiButton(text = "Import", onClick = { backStack.replaceAll(NavKey.WalletHome("pubKey")) }, modifier = Modifier.fillMaxWidth())
+        UiButton(
+            text = "Import",
+            onClick = {
+                scope.launch {
+                    val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+                    val keypair = interactor.createWallet(words)
+                    seedStorage().saveSeed(words)
+                    seedStorage().savePublicKey(keypair.publicKey.toBase58())
+                    backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
