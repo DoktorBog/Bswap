@@ -10,7 +10,7 @@ import foundation.metaplex.solanaeddsa.Keypair
 import foundation.metaplex.solanaeddsa.SolanaEddsa
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.crypto.MnemonicCode
+import com.bswap.crypto.Mnemonic
 import java.util.Base64
 
 private const val PREF_NAME = "seed_store"
@@ -62,7 +62,7 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
                 "Mnemonic must have a valid word count"
             }
 
-            val seed = MnemonicCode.INSTANCE.toSeed(mnemonic, "")
+            val seed = Mnemonic.toSeed(mnemonic)
             val derived = Slip10.derivePath(intArrayOf(44, 501, 0, 0), seed)
             val keypair = SolanaEddsa.createKeypairFromSeed(derived)
 
