@@ -8,6 +8,11 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import foundation.metaplex.rpc.RPC
+import foundation.metaplex.rpc.Commitment
+import foundation.metaplex.rpc.RpcGetBalanceConfiguration
+import foundation.metaplex.rpc.networking.NetworkDriver
+import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -23,20 +28,19 @@ class SolanaRpcClient(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val logger = LoggerFactory.getLogger(javaClass)
+    private val rpc = RPC(rpcUrl, NetworkDriver(client))
 
     suspend fun getBalance(address: String): Long {
-        val body = """{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getBalance\",\"params\":[\"$address\"]}"""
-        lateinit var text: String
+        val key = PublicKey(address)
+        var balance: Long = 0
         val time = measureTimeMillis {
-            text = client.post(rpcUrl) {
-                contentType(ContentType.Application.Json)
-                setBody(body)
-            }.bodyAsText()
+            balance = rpc.getBalance(
+                key,
+                RpcGetBalanceConfiguration(commitment = Commitment.finalized)
+            )
         }
         logger.debug("getBalance latency=${time}ms")
-        return runCatching {
-            json.parseToJsonElement(text).jsonObject["result"]!!.jsonObject["value"]!!.jsonPrimitive.long
-        }.getOrDefault(0L)
+        return balance
     }
 
     suspend fun getSPLTokens(owner: String): List<TokenInfo> {

@@ -37,8 +37,8 @@
 
 1. **Clone** this repository.
 2. **Configure** environment variables or directly edit `SolanaSwapBotConfig` to set:
-   - **RPC endpoint**  
-   - **JupiterSwapService**  
+   - **RPC endpoint** (defaults to `https://api.mainnet-beta.solana.com` if `RPC_URL` isn't set)
+   - **JupiterSwapService**
    - **JitoBundlerService** (if desired, set `useJito = true`)
    - **Private key** via the `SOLANA_PRIVATE_KEY` environment variable or a `solana_private_key.txt` file
 3. **Build** the project:
@@ -50,6 +50,16 @@
    ```bash
    ./gradlew :composeApp:wasmJsBrowserProductionRun
    ```
+
+### Wallet API
+
+Once the server is running you can query wallet balances via HTTP:
+
+```bash
+curl http://localhost:9090/wallet/<ADDRESS>/balance
+```
+
+Replace `<ADDRESS>` with any valid Solana public key.
 ## Compose UI
 
 The `composeApp` module contains reusable Jetpack Compose widgets under `com.bswap.ui`. They adapt their colors through `UiTheme` and can be reused across the application. See [composeApp/README.md](composeApp/README.md) for the list of available components and a brief overview of Compose 1.7 features.
