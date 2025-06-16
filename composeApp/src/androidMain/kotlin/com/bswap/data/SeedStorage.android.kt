@@ -25,9 +25,8 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
         .build()
 
     private fun secretKey(): SecretKey {
-        val keyBytes = ByteArray(32)
-        SecureRandom().nextBytes(keyBytes)
-        return SecretKeySpec(masterKey.alias.toByteArray(), 0, 32, "AES")
+        val keyBytes = MasterKey.DEFAULT_MASTER_KEY_ALIAS.toByteArray()
+        return SecretKeySpec(keyBytes, 0, 32, "AES")
     }
 
     private fun encrypt(data: String): String {
