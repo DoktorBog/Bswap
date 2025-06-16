@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.bswap.navigation.NavKey
@@ -19,6 +20,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
+import com.bswap.seed.SeedUtils
+import com.bswap.seed.JitoService
+import com.bswap.data.seedStorage
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.ui.input.pointer.consume
+import androidx.compose.runtime.mutableIntStateOf
 
 /**
  * Screen for confirming seed phrase order via drag and drop.
@@ -33,6 +46,9 @@ fun ConfirmSeedScreen(
     backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
+    val items = remember { mutableStateListOf(*words.shuffled().toTypedArray()) }
+    var draggingIndex by remember { androidx.compose.runtime.mutableIntStateOf(-1) }
+
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -43,19 +59,38 @@ fun ConfirmSeedScreen(
             columns = GridCells.Fixed(3),
             modifier = Modifier.weight(1f)
         ) {
-            items(words) { word ->
+            items(items.size) { index ->
+                val word = items[index]
                 SeedWordChip(
                     word = word,
-                    focused = false,
-                    onClick = {}
+                    focused = draggingIndex == index,
+                    onClick = {},
+                    modifier = Modifier.pointerInput(index) {
+                        detectDragGestures(onDragStart = { draggingIndex = index },
+                            onDragEnd = { draggingIndex = -1 },
+                            onDragCancel = { draggingIndex = -1 }) { change, drag ->
+                            change.consume()
+                            val rowSize = 40f
+                            val newIndex = (index + drag.y / rowSize).toInt().coerceIn(0, items.lastIndex)
+                            if (newIndex != index) {
+                                items.removeAt(index)
+                                items.add(newIndex, word)
+                            }
+                        }
+                    }
                 )
             }
         }
+        val scope = rememberCoroutineScope()
         UiButton(
             text = "Confirm",
-            onClick = { backStack.replaceAll(NavKey.WalletHome("pubKey")) },
+            onClick = {
+                val keypair = JitoService.generateKeypair()
+                scope.launch { seedStorage().savePublicKey(keypair.publicKey.base58()) }
+                backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.base58()))
+            },
             modifier = Modifier.fillMaxWidth(),
-            enabled = false
+            enabled = items == words
         )
     }
 }

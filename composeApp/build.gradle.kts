@@ -45,6 +45,8 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.kotlinx.serialization.json)
+            implementation(libs.androidx.datastore.preferences)
+            implementation(libs.androidx.security.crypto)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -67,6 +69,7 @@ kotlin {
             implementation(libs.coil.mp)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.sol4k)
             implementation(project(":shared"))
         }
         wasmJsMain.dependencies {

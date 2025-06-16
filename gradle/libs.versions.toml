@@ -23,6 +23,8 @@ coil3 = "3.0.4"
 metaplex = "0.3.0-beta1"
 sol4k = "0.5.4"
 kotlinx-datetime = "0.5.0"
+androidx-datastore = "1.0.0"
+androidx-security-crypto = "1.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -66,6 +68,8 @@ metaplex-solana = { module = "foundation.metaplex:solana", version.ref = "metapl
 metaplex-solana-rpc = { module = "foundation.metaplex:rpc", version.ref = "metaplex" }
 sol4k = { module = "org.sol4k:sol4k", version.ref = "sol4k" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidx-security-crypto" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
