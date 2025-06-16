@@ -21,9 +21,11 @@ import com.bswap.ui.token.TokenChip
 import com.bswap.app.networkClient
 import com.bswap.app.api.WalletApi
 import com.bswap.app.models.WalletViewModel
+import com.bswap.navigation.replaceAll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.collectAsState
+import com.bswap.ui.UiButton
 
 /**
  * Main wallet home screen showing balance and recent transactions.
@@ -62,6 +64,11 @@ fun WalletHomeScreen(
             }
         }
         PrimaryActionBar(onSend = {}, onReceive = {}, onBuy = {}, modifier = Modifier.fillMaxWidth())
+        UiButton(
+            text = "Logout",
+            onClick = { backStack.replaceAll(NavKey.Welcome) },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
