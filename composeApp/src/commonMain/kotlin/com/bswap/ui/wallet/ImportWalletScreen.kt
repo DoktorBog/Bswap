@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
 import com.bswap.ui.seed.SeedInputField
-import com.bswap.app.interactor.walletInteractor
 import com.bswap.data.seedStorage
 import kotlinx.coroutines.launch
 
@@ -33,7 +32,6 @@ fun ImportWalletScreen(
 ) {
     val (text, setText) = remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    val interactor = remember { walletInteractor() }
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -46,7 +44,7 @@ fun ImportWalletScreen(
             onClick = {
                 scope.launch {
                     val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-                    val keypair = interactor.createWallet(words)
+                    val keypair = seedStorage().createWallet(words)
                     seedStorage().saveSeed(words)
                     seedStorage().savePublicKey(keypair.publicKey.toBase58())
                     backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
