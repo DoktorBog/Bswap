@@ -1,52 +1,69 @@
 package com.bswap.data
 
 import android.content.Context
-import androidx.core.content.edit
-import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.MasterKey
 import com.bswap.app.appContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import java.security.MessageDigest
+import javax.crypto.Cipher
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
-private const val PREF_NAME = "seed_store"
-private const val KEY_SEED = "seed"
-private const val KEY_PUB = "pub_key"
+private val Context.dataStore by preferencesDataStore("seed_store")
 
 actual fun seedStorage(): SeedStorage = AndroidSeedStorage(appContext)
 
 private class AndroidSeedStorage(private val context: Context) : SeedStorage {
+    private val seedKey = stringPreferencesKey("seed")
+    private val pubKey = stringPreferencesKey("pub_key")
+    private val masterKey = MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
 
-    private val prefs by lazy {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+    private fun secretKey(): SecretKey {
+        val aliasBytes = MasterKey.DEFAULT_MASTER_KEY_ALIAS.toByteArray()
+        val digest = MessageDigest.getInstance("SHA-256").digest(aliasBytes)
+        return SecretKeySpec(digest, "AES")
+    }
 
-        EncryptedSharedPreferences.create(
-            context,
-            PREF_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+    private fun encrypt(data: String): String {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val key = secretKey()
+        cipher.init(Cipher.ENCRYPT_MODE, key)
+        val iv = cipher.iv
+        val encrypted = cipher.doFinal(data.toByteArray())
+        return (iv + encrypted).joinToString(separator = ",") { it.toString() }
+    }
+
+    private fun decrypt(data: String): String {
+        val bytes = data.split(',').map { it.toByte() }.toByteArray()
+        val iv = bytes.sliceArray(0 until 12)
+        val enc = bytes.sliceArray(12 until bytes.size)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val key = secretKey()
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+        return String(cipher.doFinal(enc))
     }
 
     override suspend fun saveSeed(words: List<String>) {
-        withContext(Dispatchers.IO) {
-            prefs.edit(commit = true) { putString(KEY_SEED, words.joinToString(" ")) }
-        }
+        val enc = encrypt(words.joinToString(" "))
+        context.dataStore.edit { it[seedKey] = enc }
     }
 
-    override suspend fun loadSeed(): List<String>? = withContext(Dispatchers.IO) {
-        prefs.getString(KEY_SEED, null)?.split(" ")
+    override suspend fun loadSeed(): List<String>? {
+        val enc = context.dataStore.data.first()[seedKey] ?: return null
+        return decrypt(enc).split(" ")
     }
 
     override suspend fun savePublicKey(key: String) {
-        withContext(Dispatchers.IO) {
-            prefs.edit(commit = true) { putString(KEY_PUB, key) }
-        }
+        context.dataStore.edit { it[pubKey] = key }
     }
 
-    override suspend fun loadPublicKey(): String? = withContext(Dispatchers.IO) {
-        prefs.getString(KEY_PUB, null)
+    override suspend fun loadPublicKey(): String? {
+        return context.dataStore.data.first()[pubKey]
     }
 }
