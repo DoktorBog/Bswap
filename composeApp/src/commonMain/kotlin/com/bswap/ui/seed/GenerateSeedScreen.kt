@@ -44,7 +44,7 @@ fun GenerateSeedScreen(
     ) {
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(seedWords) { word ->
-                SeedWordChip(word = word, selected = false, onClick = {}, enabled = false)
+                SeedWordChip(text = word, onClick = {}, enabled = false)
             }
         }
         UiButton(
