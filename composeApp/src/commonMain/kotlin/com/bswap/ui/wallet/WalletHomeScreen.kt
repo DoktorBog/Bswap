@@ -6,21 +6,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.rememberBackStack
-import com.bswap.navigation.push
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
 import com.bswap.ui.actions.PrimaryActionBar
 import com.bswap.ui.balance.BalanceCard
-import com.bswap.ui.tx.SolanaTx
-import com.bswap.ui.tx.TransactionRow
+import com.bswap.ui.token.TokenChip
+import com.bswap.app.networkClient
+import com.bswap.app.api.WalletApi
+import com.bswap.app.models.WalletViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.runtime.collectAsState
 
 /**
  * Main wallet home screen showing balance and recent transactions.
@@ -31,12 +34,15 @@ fun WalletHomeScreen(
     backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
-    val txs = remember {
-        listOf(
-            SolanaTx("sig1", "Address1", 1.23, incoming = true),
-            SolanaTx("sig2", "Address2", 0.5, incoming = false)
-        )
-    }
+    val client = remember { networkClient() }
+    val api = remember(client) { WalletApi(client) }
+    val viewModel = remember { WalletViewModel(api, publicKey) }
+
+    val walletInfo by viewModel.walletInfo.collectAsState()
+    val loading by viewModel.isLoading.collectAsState()
+
+    val solBalanceText = walletInfo?.lamports?.let { "${it / 1_000_000_000.0} SOL" } ?: "0 SOL"
+    val tokens = walletInfo?.tokens ?: emptyList()
     Column(
         modifier = modifier
             .padding(16.dp)
@@ -44,10 +50,15 @@ fun WalletHomeScreen(
             .testTag(NavKey.WalletHome::class.simpleName!!),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        BalanceCard(solBalance = "0 SOL", tokensValue = "$0", isLoading = false)
+        BalanceCard(solBalance = solBalanceText, tokensValue = "$0", isLoading = loading)
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(txs) { tx ->
-                TransactionRow(tx)
+            items(tokens) { token ->
+                TokenChip(
+                    icon = Icons.Default.Star,
+                    ticker = token.symbol ?: token.mint.take(4),
+                    balance = token.amount ?: "0",
+                    onClick = {}
+                )
             }
         }
         PrimaryActionBar(onSend = {}, onReceive = {}, onBuy = {}, modifier = Modifier.fillMaxWidth())
