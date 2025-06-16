@@ -7,7 +7,7 @@ package com.bswap.server.config
  */
 object ServerConfig {
     val rpcUrl: String = System.getenv("RPC_URL")
-        ?: "https://yolo-fluent-glitter.solana-mainnet.quiknode.pro/2624c5dac7235db7aa8c9f0bc1b297af251f93ee"
+        ?: "https://api.mainnet-beta.solana.com"
     val jupiterApiUrl: String = System.getenv("JUPITER_API_URL") ?: "https://quote-api.jup.ag/v6"
 
     val dexTokenProfilesUrl: String = System.getenv("DEX_TOKEN_PROFILES_URL")
