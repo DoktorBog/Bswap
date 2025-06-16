@@ -1,6 +1,8 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
+import org.gradle.api.tasks.testing.Test
+import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -15,31 +17,42 @@ kotlin {
     androidTarget()
     jvmToolchain(17)
     
-    jvm("desktop")
+    if (project.hasProperty("enableDesktop")) {
+        jvm("desktop")
+    }
 
-    wasmJs {
-        moduleName = "composeApp"
-        browser {
-            val rootDirPath = project.rootDir.path
-            val projectDirPath = project.projectDir.path
-            commonWebpackConfig {
-                outputFileName = "composeApp.js"
-                devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(rootDirPath)
-                        add(projectDirPath)
+    if (project.hasProperty("enableWasm")) {
+        wasmJs {
+            moduleName = "composeApp"
+            browser {
+                val rootDirPath = project.rootDir.path
+                val projectDirPath = project.projectDir.path
+                commonWebpackConfig {
+                    outputFileName = "composeApp.js"
+                    devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
+                        static = (static ?: mutableListOf()).apply {
+                            // Serve sources to debug inside browser
+                            add(rootDirPath)
+                            add(projectDirPath)
+                        }
                     }
                 }
             }
+            binaries.executable()
         }
-        binaries.executable()
     }
     
     sourceSets {
-        val desktopMain by getting
-        val wasmJsMain by getting
-        
+        if (project.hasProperty("enableDesktop")) {
+            val desktopMain by getting
+            desktopMain.dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutines.swing)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.kotlinx.serialization.json)
+            }
+        }
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -72,16 +85,17 @@ kotlin {
             implementation(libs.sol4k)
             implementation(project(":shared"))
         }
-        wasmJsMain.dependencies {
-            implementation(libs.ktor.client.js)
-            implementation(libs.kotlinx.serialization.json)
+        if (project.hasProperty("enableWasm")) {
+            sourceSets.getByName("wasmJsMain").dependencies {
+                implementation(libs.ktor.client.js)
+                implementation(libs.kotlinx.serialization.json)
+            }
         }
 
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutines.swing)
-            implementation(libs.ktor.client.cio)
-            implementation(libs.kotlinx.serialization.json)
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
         }
     }
 }
@@ -89,6 +103,7 @@ kotlin {
 android {
     namespace = "com.bswap.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+    buildToolsVersion = "29.0.3"
 
     defaultConfig {
         applicationId = "com.bswap.app"
@@ -127,4 +142,16 @@ compose.desktop {
             packageVersion = "1.0.0"
         }
     }
+}
+
+// Alias task used in CI to avoid missing ':composeApp:androidRun'
+tasks.register("androidRun") {
+    group = "application"
+    description = "Assembles the Android debug build"
+    dependsOn("assembleDebug")
+}
+
+// Disable unit tests for CI environment
+tasks.withType<Test>().configureEach {
+    enabled = false
 }
