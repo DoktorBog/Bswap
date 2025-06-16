@@ -14,14 +14,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiTheme
-
-/** Data class representing a Solana transaction. */
-data class SolanaTx(
-    val signature: String,
-    val address: String,
-    val amount: Double,
-    val incoming: Boolean
-)
+import com.bswap.shared.model.SolanaTx
 
 /**
  * Row displaying brief information about a transaction.

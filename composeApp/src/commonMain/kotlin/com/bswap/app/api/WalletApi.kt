@@ -24,6 +24,9 @@ class WalletApi(private val client: HttpClient) {
     suspend fun getTokens(address: String): List<TokenInfo> =
         client.get("$baseUrl/wallet/$address/tokens").body()
 
+    suspend fun getHistory(address: String): List<SolanaTx> =
+        client.get("$baseUrl/wallet/$address/history").body()
+
     suspend fun swap(request: SwapRequest): SwapTx =
         client.post("$baseUrl/swap") {
             contentType(ContentType.Application.Json)
