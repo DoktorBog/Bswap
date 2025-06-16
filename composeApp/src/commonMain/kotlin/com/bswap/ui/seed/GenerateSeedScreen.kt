@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
+import com.bswap.app.copyToClipboard
 import com.bswap.seed.SeedUtils
 import com.bswap.data.seedStorage
 
@@ -46,7 +47,11 @@ fun GenerateSeedScreen(
                 SeedWordChip(word = word, focused = false, onClick = {})
             }
         }
-        UiButton(text = "Copy", onClick = {}, modifier = Modifier.fillMaxWidth())
+        UiButton(
+            text = "Copy",
+            onClick = { copyToClipboard(seedWords.joinToString(" ")) },
+            modifier = Modifier.fillMaxWidth()
+        )
         UiButton(text = "Next", onClick = { backStack.push(NavKey.ConfirmSeed(seedWords)) }, modifier = Modifier.fillMaxWidth())
     }
 }

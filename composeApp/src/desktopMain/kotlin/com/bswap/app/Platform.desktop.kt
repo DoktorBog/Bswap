@@ -6,6 +6,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import java.awt.Desktop
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 import java.net.URI
 
 actual fun networkClient(): HttpClient {
@@ -31,4 +33,9 @@ actual fun openLink(link: String): Boolean {
         e.printStackTrace()
         false
     }
+}
+
+actual fun copyToClipboard(text: String) {
+    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+    clipboard.setContents(StringSelection(text), null)
 }

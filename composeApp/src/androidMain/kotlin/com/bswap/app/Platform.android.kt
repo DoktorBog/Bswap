@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.content.ClipData
+import android.content.ClipboardManager
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -41,4 +43,10 @@ actual fun openLink(link: String): Boolean {
         e.printStackTrace()
         false
     }
+}
+
+actual fun copyToClipboard(text: String) {
+    val clipboard = appContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    val clip = ClipData.newPlainText("text", text)
+    clipboard.setPrimaryClip(clip)
 }

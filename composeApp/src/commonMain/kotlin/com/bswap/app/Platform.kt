@@ -11,3 +11,5 @@ expect fun getPlatform(): Platform
 expect fun networkClient(): HttpClient
 
 expect fun openLink(link: String): Boolean
+
+expect fun copyToClipboard(text: String)
