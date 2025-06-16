@@ -7,7 +7,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.MasterKey
 import com.bswap.app.appContext
 import kotlinx.coroutines.flow.first
-import java.security.SecureRandom
+import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -25,8 +25,9 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
         .build()
 
     private fun secretKey(): SecretKey {
-        val keyBytes = MasterKey.DEFAULT_MASTER_KEY_ALIAS.toByteArray()
-        return SecretKeySpec(keyBytes, 0, 32, "AES")
+        val aliasBytes = MasterKey.DEFAULT_MASTER_KEY_ALIAS.toByteArray()
+        val digest = MessageDigest.getInstance("SHA-256").digest(aliasBytes)
+        return SecretKeySpec(digest, "AES")
     }
 
     private fun encrypt(data: String): String {
