@@ -2,7 +2,7 @@ package com.bswap.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.preferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.MasterKey
 import com.bswap.app.appContext
@@ -18,8 +18,8 @@ private val Context.dataStore by preferencesDataStore("seed_store")
 actual fun seedStorage(): SeedStorage = AndroidSeedStorage(appContext)
 
 private class AndroidSeedStorage(private val context: Context) : SeedStorage {
-    private val seedKey = preferencesKey<String>("seed")
-    private val pubKey = preferencesKey<String>("pub_key")
+    private val seedKey = stringPreferencesKey("seed")
+    private val pubKey = stringPreferencesKey("pub_key")
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
@@ -27,7 +27,7 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
     private fun secretKey(): SecretKey {
         val keyBytes = ByteArray(32)
         SecureRandom().nextBytes(keyBytes)
-        return SecretKeySpec(masterKey.keyStoreAlias.toByteArray(), 0, 32, "AES")
+        return SecretKeySpec(masterKey.alias.toByteArray(), 0, 32, "AES")
     }
 
     private fun encrypt(data: String): String {

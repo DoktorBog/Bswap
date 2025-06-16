@@ -23,6 +23,7 @@ import com.bswap.ui.UiTheme
 import com.bswap.seed.SeedUtils
 import com.bswap.seed.JitoService
 import com.bswap.data.seedStorage
+import org.sol4k.toBase58
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.input.pointer.pointerInput
@@ -32,6 +33,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.input.pointer.consume
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /**
  * Screen for confirming seed phrase order via drag and drop.
@@ -86,8 +89,8 @@ fun ConfirmSeedScreen(
             text = "Confirm",
             onClick = {
                 val keypair = JitoService.generateKeypair()
-                scope.launch { seedStorage().savePublicKey(keypair.publicKey.base58()) }
-                backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.base58()))
+                scope.launch { seedStorage().savePublicKey(keypair.publicKey.toBase58()) }
+                backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = items == words
