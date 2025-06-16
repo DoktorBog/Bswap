@@ -13,12 +13,15 @@ import androidx.compose.ui.platform.testTag
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.rememberBackStack
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.push
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
+import com.bswap.seed.SeedUtils
+import com.bswap.data.seedStorage
 
 /**
  * Screen displaying generated seed phrase.
@@ -30,7 +33,8 @@ fun GenerateSeedScreen(
     backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
-    val seedWords = remember { List(12) { "word${'$'}{it + 1}" } }
+    val seedWords = remember { SeedUtils.generateSeed() }
+    LaunchedEffect(Unit) { seedStorage().saveSeed(seedWords) }
     Column(
         modifier = modifier
             .padding(16.dp)

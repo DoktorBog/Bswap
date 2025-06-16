@@ -11,10 +11,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 
 private val DarkColorPalette = darkColorScheme(
-    primary = Color(0xFFBB86FC),
-    secondary = Color(0xFF03DAC5),
-    background = Color(0xFF121212),
-    surface = Color(0xFF121212),
+    primary = Color.White,
+    secondary = Color.White,
+    background = Color(0xFF000000),
+    surface = Color(0xFF1C1C1C),
     onPrimary = Color.Black,
     onSecondary = Color.Black,
     onBackground = Color.White,
@@ -22,12 +22,12 @@ private val DarkColorPalette = darkColorScheme(
 )
 
 private val LightColorPalette = lightColorScheme(
-    primary = Color(0xFF6200EE),
-    secondary = Color(0xFF03DAC5),
+    primary = Color.Black,
+    secondary = Color.Black,
     background = Color(0xFFFFFFFF),
     surface = Color(0xFFFFFFFF),
     onPrimary = Color.White,
-    onSecondary = Color.Black,
+    onSecondary = Color.White,
     onBackground = Color.Black,
     onSurface = Color.Black,
 )
