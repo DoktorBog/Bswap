@@ -1,28 +1,24 @@
 package foundation.metaplex.solanaeddsa
 
 import foundation.metaplex.solanapublickeys.PublicKey
-import java.security.SecureRandom
+import wallet.core.jni.PrivateKey
+import wallet.core.jni.Curve
 
 object SolanaEddsa {
-    private val random = SecureRandom()
-
     fun generateKeypair(): Keypair {
-        val secret = ByteArray(32)
-        random.nextBytes(secret)
-        val pub = PublicKey(secret.copyOf())
-        return Keypair(pub, secret)
+        val privateKey = PrivateKey()
+        val publicKey = privateKey.getPublicKeyEd25519()
+        return Keypair(PublicKey(publicKey.data()), privateKey.data())
     }
 
     fun createKeypairFromSeed(seed: ByteArray): Keypair {
-        val secret = seed.copyOf(32)
-        val pub = PublicKey(secret.copyOf())
-        return Keypair(pub, secret)
+        val privateKey = PrivateKey(seed)
+        val publicKey = privateKey.getPublicKeyEd25519()
+        return Keypair(PublicKey(publicKey.data()), privateKey.data())
     }
 
     fun sign(message: ByteArray, keypair: Keypair): ByteArray {
-        // Dummy implementation
-        val result = ByteArray(64)
-        random.nextBytes(result)
-        return result
+        val privateKey = PrivateKey(keypair.secretKey)
+        return privateKey.sign(message, Curve.ED25519)
     }
 }
