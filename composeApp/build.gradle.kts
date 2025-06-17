@@ -51,6 +51,7 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.androidx.security.crypto)
             implementation(libs.bitcoinj.core)
+            implementation(libs.wallet.core)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -74,6 +75,7 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
             implementation(libs.metaplex.solanaeddsa)
+            implementation(libs.wallet.core)
             implementation(project(":shared"))
         }
         wasmJsMain?.dependencies {
