@@ -50,7 +50,9 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.androidx.security.crypto)
-            implementation(libs.bitcoinj.core)
+            implementation("org.bitcoinj:bitcoinj-core:${libs.versions.bitcoinj.get()}") {
+                exclude(group = "com.google.protobuf", module = "protobuf-javalite")
+            }
             implementation(libs.wallet.core)
         }
         commonMain.dependencies {
