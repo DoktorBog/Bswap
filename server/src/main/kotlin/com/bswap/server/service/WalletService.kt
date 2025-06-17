@@ -33,6 +33,12 @@ class WalletService(
         Result.failure(e)
     }
 
+    suspend fun getHistory(address: String): Result<List<SolanaTx>> = try {
+        Result.success(rpcClient.getHistory(address))
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     suspend fun walletInfo(address: String): Result<WalletInfo> = try {
         val balance = rpcClient.getBalance(address)
         val tokens = rpcClient.getSPLTokens(address)
