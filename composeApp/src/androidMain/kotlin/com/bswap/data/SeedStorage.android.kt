@@ -5,12 +5,11 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.bswap.app.appContext
-import com.bswap.crypto.Slip10
+import com.bswap.wallet.WalletDerivationStrategy
+import com.bswap.wallet.Bip44WalletDerivationStrategy
 import foundation.metaplex.solanaeddsa.Keypair
-import foundation.metaplex.solanaeddsa.SolanaEddsa
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import com.bswap.crypto.Mnemonic
 import java.util.Base64
 
 private const val PREF_NAME = "seed_store"
@@ -56,23 +55,20 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
         prefs.getString(KEY_PUB, null)
     }
 
-    override suspend fun createWallet(mnemonic: List<String>): Keypair =
-        withContext(Dispatchers.Default) {
-            require(mnemonic.size in setOf(12, 15, 18, 21, 24)) {
-                "Mnemonic must have a valid word count"
-            }
+    override suspend fun createWallet(
+        mnemonic: List<String>,
+        accountIndex: Int,
+        strategy: WalletDerivationStrategy
+    ): Keypair = withContext(Dispatchers.Default) {
+        val keypair = strategy.deriveKeypair(mnemonic, accountIndex)
 
-            val seed = Mnemonic.toSeed(mnemonic)
-            val derived = Slip10.derivePath(intArrayOf(44, 501, 0, 0), seed)
-            val keypair = SolanaEddsa.createKeypairFromSeed(derived)
-
-            prefs.edit(commit = true) {
-                putString(KEY_PUB, keypair.publicKey.toBase58())
-                putString(KEY_SECRET, Base64.getEncoder().encodeToString(keypair.secretKey))
-            }
-
-            keypair
+        prefs.edit(commit = true) {
+            putString(KEY_PUB, keypair.publicKey.toBase58())
+            putString(KEY_SECRET, Base64.getEncoder().encodeToString(keypair.secretKey))
         }
+
+        keypair
+    }
 
     override suspend fun loadPrivateKey(): ByteArray? = withContext(Dispatchers.IO) {
         prefs.getString(KEY_SECRET, null)?.let { Base64.getDecoder().decode(it) }
