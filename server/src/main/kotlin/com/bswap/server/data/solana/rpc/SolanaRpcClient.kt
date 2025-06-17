@@ -2,6 +2,7 @@ package com.bswap.server.data.solana.rpc
 
 import com.bswap.server.RPC_URL
 import com.bswap.shared.model.TokenInfo
+import com.bswap.shared.model.SolanaTx
 import io.ktor.client.HttpClient
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -63,6 +64,21 @@ class SolanaRpcClient(
                 val decimals = info["tokenAmount"]!!.jsonObject["decimals"]!!.jsonPrimitive.int
                 TokenInfo(mint = mint, amount = amount, decimals = decimals)
             }.getOrNull()
+        }
+    }
+
+    suspend fun getHistory(address: String, limit: Int = 10): List<SolanaTx> {
+        val req =
+            """{"jsonrpc":"2.0","id":1,"method":"getSignaturesForAddress","params":["$address",{"limit":$limit}]}"""
+        val text = client.post(rpcUrl) {
+            contentType(ContentType.Application.Json)
+            setBody(req)
+        }.bodyAsText()
+        val element = runCatching { json.parseToJsonElement(text) }.getOrNull() ?: return emptyList()
+        val values = element.jsonObject["result"]?.jsonArray ?: return emptyList()
+        return values.mapNotNull { item ->
+            val signature = item.jsonObject["signature"]?.jsonPrimitive?.content
+            signature?.let { SolanaTx(signature = it, address = address) }
         }
     }
 }

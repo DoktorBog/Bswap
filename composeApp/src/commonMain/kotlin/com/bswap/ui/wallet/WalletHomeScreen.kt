@@ -21,6 +21,7 @@ import com.bswap.ui.token.TokenChip
 import com.bswap.app.networkClient
 import com.bswap.app.api.WalletApi
 import com.bswap.app.models.WalletViewModel
+import com.bswap.ui.tx.TransactionRow
 import com.bswap.navigation.replaceAll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -42,6 +43,7 @@ fun WalletHomeScreen(
 
     val walletInfo by viewModel.walletInfo.collectAsState()
     val loading by viewModel.isLoading.collectAsState()
+    val history by viewModel.history.collectAsState()
 
     val solBalanceText = walletInfo?.lamports?.let { "${it / 1_000_000_000.0} SOL" } ?: "0 SOL"
     val tokens = walletInfo?.tokens ?: emptyList()
@@ -61,6 +63,9 @@ fun WalletHomeScreen(
                     balance = token.amount ?: "0",
                     onClick = {}
                 )
+            }
+            items(history) { tx ->
+                TransactionRow(tx = tx)
             }
         }
         PrimaryActionBar(onSend = {}, onReceive = {}, onBuy = {}, modifier = Modifier.fillMaxWidth())

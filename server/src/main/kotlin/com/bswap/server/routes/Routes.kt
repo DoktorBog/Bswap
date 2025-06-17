@@ -34,6 +34,16 @@ fun Route.walletRoutes(service: WalletService) {
             .onFailure { call.respond(HttpStatusCode.InternalServerError, ApiError(it.message ?: "error")) }
     }
 
+    get("/wallet/{address}/history") {
+        val address = call.parameters["address"] ?: return@get call.respond(
+            HttpStatusCode.BadRequest,
+            ApiError("missing address")
+        )
+        val result = service.getHistory(address)
+        result.onSuccess { call.respond(it) }
+            .onFailure { call.respond(HttpStatusCode.InternalServerError, ApiError(it.message ?: "error")) }
+    }
+
     get("/tokens/search") {
         val q = call.request.queryParameters["q"] ?: return@get call.respond(
             HttpStatusCode.BadRequest,
