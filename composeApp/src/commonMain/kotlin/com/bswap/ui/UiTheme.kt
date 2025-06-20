@@ -2,13 +2,16 @@ package com.bswap.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Typography
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.unit.dp
+
 
 private val DarkColorPalette = darkColorScheme(
     primary = Color.White,
@@ -53,7 +56,11 @@ fun UiTheme(
     MaterialTheme(
         colorScheme = colors,
         typography = Typography(),
-        shapes = Shapes(),
+        shapes = Shapes(
+            small = RoundedCornerShape(8.dp),
+            medium = RoundedCornerShape(12.dp),
+            large = RoundedCornerShape(28.dp)
+        ),
         content = content
     )
 }

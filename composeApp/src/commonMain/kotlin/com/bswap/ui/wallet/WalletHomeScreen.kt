@@ -1,6 +1,7 @@
 package com.bswap.ui.wallet
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -26,6 +27,10 @@ import com.bswap.navigation.replaceAll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.Alignment
 import com.bswap.ui.UiButton
 
 /**
@@ -47,33 +52,43 @@ fun WalletHomeScreen(
 
     val solBalanceText = walletInfo?.lamports?.let { "${it / 1_000_000_000.0} SOL" } ?: "0 SOL"
     val tokens = walletInfo?.tokens ?: emptyList()
-    Column(
-        modifier = modifier
-            .padding(16.dp)
-            .fillMaxWidth()
-            .testTag(NavKey.WalletHome::class.simpleName!!),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        BalanceCard(solBalance = solBalanceText, tokensValue = "$0", isLoading = loading)
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(tokens) { token ->
-                TokenChip(
-                    icon = Icons.Default.Star,
-                    ticker = token.symbol ?: token.mint.take(4),
-                    balance = token.amount ?: "0",
-                    onClick = {}
-                )
+    Box(modifier = modifier.testTag(NavKey.WalletHome::class.simpleName!!)) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            BalanceCard(solBalance = solBalanceText, tokensValue = "$0", isLoading = loading)
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(tokens) { token ->
+                    TokenChip(
+                        icon = Icons.Default.Star,
+                        ticker = token.symbol ?: token.mint.take(4),
+                        balance = token.amount ?: "0",
+                        onClick = {}
+                    )
+                }
+                items(history) { tx ->
+                    TransactionRow(tx = tx)
+                }
             }
-            items(history) { tx ->
-                TransactionRow(tx = tx)
-            }
+            PrimaryActionBar(onSend = {}, onReceive = {}, onBuy = {}, modifier = Modifier.fillMaxWidth())
+            UiButton(
+                text = "Logout",
+                onClick = { backStack.replaceAll(NavKey.Welcome) },
+                modifier = Modifier.fillMaxWidth(),
+                secondary = true
+            )
         }
-        PrimaryActionBar(onSend = {}, onReceive = {}, onBuy = {}, modifier = Modifier.fillMaxWidth())
-        UiButton(
-            text = "Logout",
-            onClick = { backStack.replaceAll(NavKey.Welcome) },
-            modifier = Modifier.fillMaxWidth()
-        )
+        FloatingActionButton(
+            onClick = {},
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null)
+        }
     }
 }
 
