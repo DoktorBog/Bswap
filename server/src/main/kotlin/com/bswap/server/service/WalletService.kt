@@ -12,6 +12,7 @@ class WalletService(
     private val tokenRepo: TokenListRepo,
     private val jupiter: JupiterSwapService,
     private val jito: JitoBundlerService,
+    private val walletRepo: com.bswap.shared.wallet.WalletRepository,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -101,4 +102,10 @@ class WalletService(
     } catch (e: Exception) {
         Result.failure(e)
     }
+
+    fun createWallet(coin: CoinType = CoinType.SOLANA): Pair<String, ByteArray> =
+        walletRepo.generateAddress(coin)
+
+    fun sign(message: ByteArray, privateKey: ByteArray, coin: CoinType = CoinType.SOLANA): ByteArray =
+        walletRepo.signMessage(message, privateKey, coin)
 }

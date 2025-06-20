@@ -1,9 +1,9 @@
 package com.bswap.data
 
-import foundation.metaplex.solanaeddsa.Keypair
-
+import com.bswap.shared.wallet.Keypair
 import com.bswap.wallet.Bip44WalletDerivationStrategy
 import com.bswap.wallet.WalletDerivationStrategy
+import wallet.core.jni.CoinType
 
 interface SeedStorage {
     suspend fun saveSeed(words: List<String>)
@@ -11,17 +11,13 @@ interface SeedStorage {
     suspend fun savePublicKey(key: String)
     suspend fun loadPublicKey(): String?
 
-    /**
-     * Create a deterministic wallet from the given mnemonic and persist the
-     * resulting secret and public keys securely.
-     */
     suspend fun createWallet(
         mnemonic: List<String>,
         accountIndex: Int = 0,
         strategy: WalletDerivationStrategy = Bip44WalletDerivationStrategy(),
+        coin: CoinType = CoinType.SOLANA,
     ): Keypair
 
-    /** Return the previously stored secret key, or null if absent. */
     suspend fun loadPrivateKey(): ByteArray?
 }
 

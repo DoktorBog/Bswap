@@ -1,9 +1,13 @@
 package com.bswap.ui.wallet
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,13 +22,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
 import com.bswap.ui.UiTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import com.bswap.ui.seed.SeedInputField
 import com.bswap.data.seedStorage
+import com.bswap.ui.TrianglesBackground
+import com.bswap.ui.UiRadioButton
+import wallet.core.jni.CoinType
 import kotlinx.coroutines.launch
 
-/**
- * Screen for manual wallet import via seed phrase.
- */
 @Composable
 fun ImportWalletScreen(
     backStack: SnapshotStateList<NavKey>,
@@ -32,26 +38,43 @@ fun ImportWalletScreen(
 ) {
     val (text, setText) = remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    Column(
+    val coins = listOf(CoinType.SOLANA, CoinType.ETHEREUM, CoinType.BITCOIN)
+    val selected = remember { mutableStateOf(CoinType.SOLANA) }
+    Box(
         modifier = modifier
-            .padding(16.dp)
-            .testTag(NavKey.ImportWallet::class.simpleName!!),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .fillMaxSize()
+            .testTag(NavKey.ImportWallet::class.simpleName!!)
     ) {
-        SeedInputField(value = text, onValueChange = setText, modifier = Modifier.fillMaxWidth())
-        UiButton(
-            text = "Import",
-            onClick = {
-                scope.launch {
-                    val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-                    val keypair = seedStorage().createWallet(words)
-                    seedStorage().saveSeed(words)
-                    seedStorage().savePublicKey(keypair.publicKey.toBase58())
-                    backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
+        TrianglesBackground(modifier = Modifier.matchParentSize())
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .align(Alignment.Center),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Import Wallet", style = MaterialTheme.typography.headlineMedium)
+            SeedInputField(value = text, onValueChange = setText, modifier = Modifier.fillMaxWidth())
+            coins.forEach { coin ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    UiRadioButton(selected = selected.value == coin, onClick = { selected.value = coin })
+                    Text(coin.name, modifier = Modifier.padding(start = 8.dp))
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
+            }
+            UiButton(
+                text = "Import",
+                onClick = {
+                    scope.launch {
+                        val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+                        val keypair = seedStorage().createWallet(words, coin = selected.value)
+                        seedStorage().saveSeed(words)
+                        seedStorage().savePublicKey(keypair.publicKey.toBase58())
+                        backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 

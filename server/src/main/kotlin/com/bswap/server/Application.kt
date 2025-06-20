@@ -98,6 +98,14 @@ val dexScreenerRepository = DexScreenerRepository(
     coroutineScope = appScope
 )
 
+val walletRepository = com.bswap.shared.wallet.WalletRepository(
+    com.bswap.shared.wallet.LoggingWalletDecorator(
+        com.bswap.shared.wallet.MetricsWalletDecorator(
+            com.bswap.shared.wallet.WalletCoreAdapterImpl()
+        )
+    )
+)
+
 val walletService = WalletService(
     SolanaRpcClient(client),
     TokenListRepo(client),
@@ -115,7 +123,8 @@ val walletService = WalletService(
             "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
             "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
         )
-    )
+    ),
+    walletRepository
 )
 
 private fun createRPC(client: HttpClient) =

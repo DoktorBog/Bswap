@@ -1,8 +1,9 @@
 package com.bswap.data
 
-import foundation.metaplex.solanaeddsa.Keypair
+import com.bswap.shared.wallet.Keypair
 import com.bswap.wallet.WalletDerivationStrategy
 import com.bswap.wallet.Bip44WalletDerivationStrategy
+import wallet.core.jni.CoinType
 
 actual fun seedStorage(): SeedStorage = InMemorySeedStorage
 
@@ -19,7 +20,8 @@ private object InMemorySeedStorage : SeedStorage {
     override suspend fun createWallet(
         mnemonic: List<String>,
         accountIndex: Int,
-        strategy: WalletDerivationStrategy
+        strategy: WalletDerivationStrategy,
+        coin: CoinType
     ): Keypair {
         val keypair = strategy.deriveKeypair(mnemonic, accountIndex)
         secret = keypair.secretKey

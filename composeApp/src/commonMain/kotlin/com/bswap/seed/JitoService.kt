@@ -1,8 +1,10 @@
 package com.bswap.seed
 
-import foundation.metaplex.solanaeddsa.Keypair
-import foundation.metaplex.solanaeddsa.SolanaEddsa
+import com.bswap.shared.wallet.Keypair
+import com.bswap.shared.wallet.WalletCoreAdapterImpl
+import wallet.core.jni.CoinType
 
 object JitoService {
-    fun generateKeypair(): Keypair = SolanaEddsa.generateKeypair()
+    private val adapter = WalletCoreAdapterImpl()
+    fun generateKeypair(coin: CoinType = CoinType.SOLANA): Keypair = adapter.generateKeypair(coin)
 }
