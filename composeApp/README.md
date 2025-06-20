@@ -1,6 +1,6 @@
 # Compose UI Components
 
-The `composeApp` module provides a small library of Jetpack Compose widgets styled with `UiTheme`. Components automatically adapt to light or dark backgrounds.
+The `composeApp` module provides a small library of Jetpack Compose widgets styled with `UiTheme`. Components automatically adapt to light or dark backgrounds without an additional design system.
 
 ## Available Components
 

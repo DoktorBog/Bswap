@@ -1,51 +1,64 @@
 package com.bswap.ui.onboarding
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.bswap.ui.TrianglesBackground
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavKey
-import com.bswap.navigation.rememberBackStack
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import com.bswap.navigation.push
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.push
 import com.bswap.ui.UiButton
-import com.bswap.ui.UiTheme
 
-/**
- * First onboarding screen with a welcome message and start button.
- *
- * @param backStack navigation back stack
- */
+private data class Slide(val title: String)
+
+private val slides = listOf(
+    Slide("Trade SPL tokens easily"),
+    Slide("Secure your funds"),
+    Slide("Open source wallet")
+)
+
 @Composable
 fun OnboardingWelcomeScreen(
     backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
+    val pagerState = rememberPagerState(pageCount = { slides.size })
     Column(
         modifier = modifier
-            .padding(16.dp)
-            .fillMaxWidth()
-            .testTag(NavKey.Welcome::class.simpleName!!),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .fillMaxSize()
+            .testTag(NavKey.Welcome::class.simpleName!!)
     ) {
-        Text("Welcome to Bswap", style = MaterialTheme.typography.headlineMedium)
-        UiButton(text = "\u041d\u0430\u0447\u0430\u0442\u044c", onClick = { backStack.push(NavKey.ChoosePath) }, modifier = Modifier.fillMaxWidth())
-    }
-}
-
-@Preview
-@Composable
-private fun OnboardingWelcomeScreenPreview() {
-    UiTheme {
-        OnboardingWelcomeScreen(rememberBackStack())
+        HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
+            val slide = slides[page]
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                TrianglesBackground(modifier = Modifier.matchParentSize())
+                Text(slide.title, style = MaterialTheme.typography.headlineMedium)
+            }
+        }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            UiButton(text = "Create Wallet", onClick = { backStack.push(NavKey.GenerateSeed) }, modifier = Modifier.weight(1f))
+            UiButton(text = "Import Wallet", onClick = { backStack.push(NavKey.ImportWallet) }, secondary = true, modifier = Modifier.weight(1f))
+        }
     }
 }
