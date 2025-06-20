@@ -7,9 +7,10 @@ import androidx.security.crypto.MasterKey
 import com.bswap.app.appContext
 import com.bswap.wallet.WalletDerivationStrategy
 import com.bswap.wallet.Bip44WalletDerivationStrategy
-import foundation.metaplex.solanaeddsa.Keypair
+import com.bswap.shared.wallet.Keypair
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import wallet.core.jni.CoinType
 import java.util.Base64
 
 private const val PREF_NAME = "seed_store"
@@ -58,7 +59,8 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
     override suspend fun createWallet(
         mnemonic: List<String>,
         accountIndex: Int,
-        strategy: WalletDerivationStrategy
+        strategy: WalletDerivationStrategy,
+        coin: CoinType
     ): Keypair = withContext(Dispatchers.Default) {
         val keypair = strategy.deriveKeypair(mnemonic, accountIndex)
 

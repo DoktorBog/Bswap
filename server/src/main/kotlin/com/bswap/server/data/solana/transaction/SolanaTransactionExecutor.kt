@@ -4,8 +4,7 @@ import com.bswap.server.data.formatLamports
 import com.bswap.server.privateKey
 import com.bswap.server.rpc
 import com.metaplex.signer.Signer
-import foundation.metaplex.base58.decodeBase58
-import foundation.metaplex.base58.encodeToBase58String
+import com.bswap.shared.wallet.decodeBase58
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.RpcSendTransactionConfiguration
 import foundation.metaplex.rpc.SerializedTransaction
@@ -14,9 +13,10 @@ import foundation.metaplex.solana.programs.SystemProgram.transfer
 import foundation.metaplex.solana.transactions.SolanaTransactionBuilder
 import foundation.metaplex.solana.transactions.Transaction
 import foundation.metaplex.solana.transactions.TransactionInstruction
-import foundation.metaplex.solanaeddsa.Keypair
-import foundation.metaplex.solanaeddsa.SolanaEddsa
 import foundation.metaplex.solanapublickeys.PublicKey
+import wallet.core.jni.PrivateKey
+import wallet.core.jni.Curve
+import com.bswap.server.data.solana.transaction.SolanaEddsa
 import org.sol4k.VersionedTransaction
 import java.math.BigDecimal
 
@@ -25,15 +25,17 @@ data class TransactionExecutionResult(
     val error: String? = null
 )
 
-class SolanaKeypair(
+data class SolanaKeypair(
     override val publicKey: com.solana.publickey.PublicKey,
     override val secretKey: ByteArray
-) : Keypair
+)
 
-class HotSigner(private val keyPair: Keypair) : Signer {
+class HotSigner(private val keyPair: SolanaKeypair) : Signer {
     override val publicKey: com.solana.publickey.PublicKey = keyPair.publicKey
-    override suspend fun signMessage(message: ByteArray): ByteArray =
-        SolanaEddsa.sign(message, keyPair)
+    override suspend fun signMessage(message: ByteArray): ByteArray {
+        val pk = PrivateKey(keyPair.secretKey.copyOfRange(0, 32))
+        return pk.sign(message, Curve.ED25519)
+    }
 }
 
 suspend fun createSwapTransaction(

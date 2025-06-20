@@ -27,7 +27,6 @@ kotlin {
                     outputFileName = "composeApp.js"
                     devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
                         static = (static ?: mutableListOf()).apply {
-                            // Serve sources to debug inside browser
                             add(rootDirPath)
                             add(projectDirPath)
                         }
@@ -68,7 +67,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.content.negotiation)
-            // Ktor Client for HTTP Requests
             implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.coil.compose.core)
@@ -76,7 +74,6 @@ kotlin {
             implementation(libs.coil.mp)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
-            implementation(libs.metaplex.solanaeddsa)
             implementation(libs.wallet.core)
             implementation(project(":shared"))
         }
@@ -141,9 +138,6 @@ dependencies {
     }
 }
 
-// The Compose Multiplatform plugin does not provide an `androidRun` task by default.
-// Register a simple placeholder so `:composeApp:androidRun` can succeed in CI
-// environments that lack Android tooling or a connected device.
 tasks.register("androidRun") {
     dependsOn("assembleDebug")
     doLast {

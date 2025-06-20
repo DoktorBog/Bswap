@@ -6,10 +6,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-
-/**
- * Simple sci-fi style background drawing a set of triangles in light grey.
- */
 @Composable
 fun TrianglesBackground(modifier: Modifier = Modifier) {
     Canvas(modifier) {

@@ -67,7 +67,6 @@ coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.re
 coil-mp = { module = "io.coil-kt.coil3:coil", version.ref = "coil3" }
 
 metaplex-solana = { module = "foundation.metaplex:solana", version.ref = "metaplex" }
-metaplex-solanaeddsa = { module = "foundation.metaplex:solanaeddsa", version.ref = "metaplex" }
 metaplex-solana-rpc = { module = "foundation.metaplex:rpc", version.ref = "metaplex" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 sol4k = { module = "org.sol4k:sol4k", version.ref = "sol4k" }

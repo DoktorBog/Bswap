@@ -22,20 +22,16 @@ ktor {
 
 dependencies {
 
-    implementation(libs.metaplex.solana)
-    implementation(libs.metaplex.solana.rpc)
+    implementation(libs.wallet.core)
 
     implementation(libs.logback)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
-    //testImplementation(libs.ktor.server.tests)
     testImplementation(libs.kotlin.test.junit)
 
-    // Ktor Client for HTTP Requests
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)
 
-    // Ktor Content Negotiation for JSON Parsing
     implementation(libs.ktor.client.content.negotiation)
     implementation(libs.ktor.server.content.negotiation)
 
@@ -43,6 +39,5 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.html.jvm)
 
-    implementation(libs.sol4k)
     implementation(project(":shared"))
 }

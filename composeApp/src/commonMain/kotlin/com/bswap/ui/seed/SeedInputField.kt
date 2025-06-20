@@ -19,12 +19,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import com.bswap.ui.UiTheme
 
-/**
- * Text field for entering a seed phrase with validation and indicator.
- *
- * @param value current text value
- * @param onValueChange callback with updated text
- */
 @Composable
 fun SeedInputField(
     value: String,

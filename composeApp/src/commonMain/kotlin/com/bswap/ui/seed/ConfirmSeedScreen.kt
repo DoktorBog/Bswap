@@ -38,11 +38,8 @@ import com.bswap.navigation.NavKey
 import com.bswap.navigation.pop
 import com.bswap.navigation.replaceAll
 import com.bswap.seed.SeedPhraseValidator
+import wallet.core.jni.CoinType
 import kotlinx.coroutines.launch
-
-/**
- * Screen for confirming seed phrase order via chip selection.
- */
 @Composable
 fun ConfirmSeedScreen(
     mnemonic: List<String>,
@@ -132,7 +129,7 @@ fun ConfirmSeedScreen(
                         if (!SeedPhraseValidator.isValid(mnemonic, selected)) {
                             snackbarHostState.showSnackbar("Words do not match")
                         } else {
-                            val keypair = seedStorage().createWallet(mnemonic)
+                            val keypair = seedStorage().createWallet(mnemonic, coin = CoinType.SOLANA)
                             seedStorage().savePublicKey(keypair.publicKey.toBase58())
                             backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
                         }
