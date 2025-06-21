@@ -75,7 +75,6 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
             implementation(libs.wallet.core)
-            implementation(project(":shared"))
         }
         wasmJsMain?.dependencies {
             implementation(libs.ktor.client.js)

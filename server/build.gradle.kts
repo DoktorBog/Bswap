@@ -22,7 +22,6 @@ ktor {
 
 dependencies {
 
-    implementation(libs.wallet.core)
 
     implementation(libs.logback)
     implementation(libs.ktor.server.core)
@@ -39,5 +38,4 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.html.jvm)
 
-    implementation(project(":shared"))
 }

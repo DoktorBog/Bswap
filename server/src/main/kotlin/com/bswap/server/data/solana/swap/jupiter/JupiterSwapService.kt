@@ -23,7 +23,7 @@ class JupiterSwapService(
     val json = Json { ignoreUnknownKeys = true }
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    private suspend fun getQuote(
+    suspend fun getQuote(
         inputMint: String,
         outputMint: String,
         amount: Long,
