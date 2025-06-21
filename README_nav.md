@@ -14,4 +14,4 @@ To move forward push a new `NavKey` onto the stack:
 ```kotlin
 backStack.push(NavKey.GenerateSeed)
 ```
-TODO: add GIF demo of the flow
+_A demonstration GIF will be added in a future update._

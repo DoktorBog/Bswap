@@ -1,79 +1,30 @@
-# Android Studio
-/*/build/
-/*/local.properties
-/*/out
-/*/*/build
-/*/*/production
-captures/
-.navigation/
-*.ipr
-*~
-*.swp
+# Gradle
+.gradle/
+build/
+
+# Local properties and environment
+local.properties
+.env
+
+# IntelliJ
+.idea/
 *.iml
-.idea/caches/
-.idea/libraries/
-.idea/shelf/
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/.name
-.idea/compiler.xml
-.idea/copyright/profiles_settings.xml
-.idea/encodings.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/scopes/scope_settings.xml
-.idea/dictionaries
-.idea/vcs.xml
-.idea/jsLibraryMappings.xml
-.idea/datasources.xml
-.idea/dataSources.ids
-.idea/sqlDataSources.xml
-.idea/dynamic.xml
-.idea/uiDesigner.xml
-.idea/assetWizardSettings.xml
-.idea/gradle.xml
-.idea/jarRepositories.xml
-.idea/navEditor.xml
-!/gradle/wrapper/gradle-wrapper.jar
 
-### Xcode ###
-*.xcodeproj/*
-!*.xcodeproj/project.pbxproj
-!*.xcodeproj/xcshareddata/
-!*.xcworkspace/contents.xcworkspacedata/
-/*.gcno
-**/xcshareddata/WorkspaceSettings.xcsettings
-*.xcuserstate
-*.xcscheme
-*.xcworkspace
-xcuserdata/
-
-# CocoaPods
-Pods/
-
-## iOS App packaging
-*.ipa
-*.dSYM.zip
-*.dSYM
-
-# Android App packaging
+# Android
+captures/
 *.apk
 *.ap_
 *.aab
 
-# macOs
+# macOS
 .DS_Store
 
-# Generated files
-bin/
-gen/
-*.class
-*.dex
+# Kotlin/Java
+out/
 
-# Gradle files
-.gradle
-.gradle/
-build/
+# Node & wasm artifacts
+node_modules/
 
-# Local configuration file
-local.properties
+# Kotlin Multiplatform
+kotlin-js-store/
+

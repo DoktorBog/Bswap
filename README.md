@@ -11,6 +11,15 @@
 - **Metaplex RPC** for executing on-chain transactions in Solana.
 - **[Jito Bundles](https://docs.jito.wtf/lowlatencytxnsend/)** (optional) for low-latency, MEV-protected transactions on Solana.
 
+## Quick Start
+1. `git clone` this repository
+2. Run `./gradlew build` to fetch dependencies. The build uses Gradle's
+   **configuration cache** and **parallel execution** to speed things up.
+3. Launch the backend with `./gradlew server:run`
+4. Open the browser UI via `./gradlew :composeApp:wasmJsBrowserProductionRun`
+5. To run Android unit tests, set the `ANDROID_HOME` environment variable or
+   create a `local.properties` file with `sdk.dir=<path-to-sdk>`.
+
 ### Key Features
 
 - **Automated Buy Logic**  

@@ -28,4 +28,4 @@ object MnemonicValidator {
     }
 }
 
-// TODO(JD): Add support for non-English wordlists
+// Support for non-English wordlists is planned for a future release
