@@ -16,8 +16,16 @@ kotlin {
                 implementation(libs.wallet.core)
             }
         }
-        val jvmMain by getting
-        val androidMain by getting
+        val jvmMain by getting {
+            dependencies {
+                implementation(libs.wallet.core)
+            }
+        }
+        val androidMain by getting {
+            dependencies {
+                implementation(libs.wallet.core)
+            }
+        }
         val wasmJsMain by getting
     }
 }

@@ -1,6 +1,5 @@
 package com.bswap.shared.wallet
 
-import wallet.core.jni.AnyAddress
 import wallet.core.jni.CoinType
 import wallet.core.jni.PrivateKey
 import wallet.core.jni.Curve

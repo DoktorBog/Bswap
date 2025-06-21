@@ -8,6 +8,7 @@ import com.bswap.app.appContext
 import com.bswap.wallet.WalletDerivationStrategy
 import com.bswap.wallet.Bip44WalletDerivationStrategy
 import com.bswap.shared.wallet.Keypair
+import com.bswap.shared.wallet.toBase58
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import wallet.core.jni.CoinType
