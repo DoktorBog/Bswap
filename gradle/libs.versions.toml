@@ -24,7 +24,7 @@ metaplex = "0.3.0-beta1"
 kotlinx-datetime = "0.5.0"
 sol4k = "0.5.14"
 bitcoinj = "0.17"
-wallet-core = "0.12.8"
+wallet-core = "0.3.7"
 androidx-datastore = "1.0.0"
 androidx-security-crypto = "1.1.0-alpha06"
 
@@ -71,7 +71,7 @@ metaplex-solana-rpc = { module = "foundation.metaplex:rpc", version.ref = "metap
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 sol4k = { module = "org.sol4k:sol4k", version.ref = "sol4k" }
 bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinj" }
-wallet-core = { module = "com.trustwallet.walletcore:walletcore", version.ref = "wallet-core" }
+wallet-core = { module = "com.portto:walletcore", version.ref = "wallet-core" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidx-security-crypto" }
 

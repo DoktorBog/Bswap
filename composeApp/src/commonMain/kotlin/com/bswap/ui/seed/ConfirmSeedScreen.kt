@@ -39,6 +39,7 @@ import com.bswap.navigation.pop
 import com.bswap.navigation.replaceAll
 import com.bswap.seed.SeedPhraseValidator
 import wallet.core.jni.CoinType
+import com.bswap.shared.wallet.toBase58
 import kotlinx.coroutines.launch
 @Composable
 fun ConfirmSeedScreen(

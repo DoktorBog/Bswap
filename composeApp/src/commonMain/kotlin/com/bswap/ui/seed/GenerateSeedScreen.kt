@@ -35,6 +35,8 @@ import com.bswap.seed.SeedUtils
 import com.bswap.data.seedStorage
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 /**
  * Screen displaying generated seed phrase.

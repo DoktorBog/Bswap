@@ -29,6 +29,7 @@ import com.bswap.data.seedStorage
 import com.bswap.ui.TrianglesBackground
 import com.bswap.ui.UiRadioButton
 import wallet.core.jni.CoinType
+import com.bswap.shared.wallet.toBase58
 import kotlinx.coroutines.launch
 
 @Composable

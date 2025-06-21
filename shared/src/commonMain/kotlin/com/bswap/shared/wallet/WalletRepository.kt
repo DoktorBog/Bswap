@@ -1,5 +1,7 @@
 package com.bswap.shared.wallet
 
+import wallet.core.jni.CoinType
+
 class WalletRepository(private val adapter: WalletCoreAdapter) {
     fun generateAddress(coin: CoinType): Pair<String, ByteArray> {
         val (pub, priv) = adapter.generateKeypair(coin)
