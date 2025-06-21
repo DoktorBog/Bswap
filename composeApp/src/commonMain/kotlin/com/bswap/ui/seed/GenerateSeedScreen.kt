@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,7 @@ import androidx.compose.runtime.setValue
  *
  * @param backStack navigation back stack
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GenerateSeedScreen(
     backStack: SnapshotStateList<NavKey>,

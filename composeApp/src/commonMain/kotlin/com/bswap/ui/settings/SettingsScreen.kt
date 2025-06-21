@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.ExperimentalMaterial3Api
 import com.bswap.app.Strings
 import com.bswap.ui.account.AccountHeader
 import com.bswap.ui.UiSwitch
@@ -32,6 +33,7 @@ import com.bswap.app.copyToClipboard
 import com.bswap.ui.UiButton
 import androidx.compose.ui.unit.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(publicKey: String, onBack: () -> Unit, onLogout: () -> Unit, modifier: Modifier = Modifier) {
     val darkTheme = remember { mutableStateOf(false) }

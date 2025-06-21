@@ -5,10 +5,9 @@ import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.bswap.app.appContext
-import com.bswap.wallet.WalletDerivationStrategy
-import com.bswap.wallet.Bip44WalletDerivationStrategy
 import com.bswap.shared.wallet.Keypair
 import com.bswap.shared.wallet.toBase58
+import com.bswap.wallet.WalletDerivationStrategy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import wallet.core.jni.CoinType
