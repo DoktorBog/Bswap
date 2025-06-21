@@ -11,5 +11,5 @@ sealed interface NavKey {
     @Serializable data class ConfirmSeed(val words: List<String>) : NavKey
     @Serializable object ImportWallet : NavKey
     @Serializable data class WalletHome(val publicKey: String) : NavKey
-    @Serializable object AccountSettings : NavKey
+    @Serializable data class AccountSettings(val publicKey: String) : NavKey
 }

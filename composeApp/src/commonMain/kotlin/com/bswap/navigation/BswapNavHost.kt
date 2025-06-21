@@ -3,13 +3,13 @@ package com.bswap.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.NavDisplay
-import com.bswap.ui.account.AccountSettingsScreen
+import com.bswap.ui.settings.SettingsScreen
 import com.bswap.ui.onboarding.ChoosePathScreen
 import com.bswap.ui.onboarding.OnboardingWelcomeScreen
 import com.bswap.ui.seed.ConfirmSeedScreen
 import com.bswap.ui.seed.GenerateSeedScreen
 import com.bswap.ui.wallet.ImportWalletScreen
-import com.bswap.ui.wallet.WalletHomeScreen
+import com.bswap.ui.home.HomeScreen
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 
@@ -22,8 +22,15 @@ fun BswapNavHost(backStack: SnapshotStateList<NavKey>) {
             NavKey.GenerateSeed -> GenerateSeedScreen(backStack)
             is NavKey.ConfirmSeed -> ConfirmSeedScreen(key.words, backStack)
             NavKey.ImportWallet -> ImportWalletScreen(backStack)
-            is NavKey.WalletHome -> WalletHomeScreen(key.publicKey, backStack)
-            NavKey.AccountSettings -> AccountSettingsScreen(backStack)
+            is NavKey.WalletHome -> HomeScreen(
+                publicKey = key.publicKey,
+                onSettings = { backStack.push(NavKey.AccountSettings(key.publicKey)) }
+            )
+            is NavKey.AccountSettings -> SettingsScreen(
+                publicKey = key.publicKey,
+                onBack = { backStack.pop() },
+                onLogout = { backStack.replaceAll(NavKey.Welcome) }
+            )
         }
     }
 }
