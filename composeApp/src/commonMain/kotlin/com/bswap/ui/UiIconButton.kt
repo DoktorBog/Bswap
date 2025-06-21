@@ -26,7 +26,7 @@ fun UiIconButton(
 @Preview
 @Composable
 fun UiIconButtonPreview() {
-    UiTheme {
+    WalletTheme {
         UiIconButton(onClick = {}) {
             Icon(Icons.Default.Favorite, contentDescription = null)
         }

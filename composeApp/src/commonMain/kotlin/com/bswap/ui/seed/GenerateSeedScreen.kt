@@ -29,7 +29,7 @@ import com.bswap.navigation.push
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import com.bswap.app.copyToClipboard
 import com.bswap.seed.SeedUtils
 import com.bswap.data.seedStorage
@@ -94,7 +94,7 @@ fun GenerateSeedScreen(
 @Preview
 @Composable
 private fun GenerateSeedScreenPreview() {
-    UiTheme {
+    WalletTheme {
         GenerateSeedScreen(rememberBackStack())
     }
 }

@@ -24,7 +24,7 @@ fun UiTextField(
 @Preview
 @Composable
 fun UiTextFieldPreview() {
-    UiTheme {
+    WalletTheme {
         UiTextField(value = "", onValueChange = {}, label = "Label")
     }
 }

@@ -21,7 +21,7 @@ import com.bswap.navigation.replaceAll
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import com.bswap.ui.seed.SeedInputField
@@ -81,7 +81,7 @@ fun ImportWalletScreen(
 @Preview
 @Composable
 private fun ImportWalletScreenPreview() {
-    UiTheme {
+    WalletTheme {
         ImportWalletScreen(rememberBackStack())
     }
 }

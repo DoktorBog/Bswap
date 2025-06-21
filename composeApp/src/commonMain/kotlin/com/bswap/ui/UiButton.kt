@@ -36,7 +36,7 @@ fun UiButton(
 @Preview
 @Composable
 fun UiButtonPreview() {
-    UiTheme {
+    WalletTheme {
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

@@ -7,7 +7,7 @@ import com.bswap.navigation.BswapNavHost
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.rememberBackStack
 import com.bswap.navigation.replaceAll
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import androidx.compose.ui.tooling.preview.Preview
 import com.bswap.data.seedStorage
 
@@ -22,7 +22,7 @@ fun ComposeApp(backStack: SnapshotStateList<NavKey> = rememberBackStack()) {
             backStack.replaceAll(NavKey.WalletHome(pubKey))
         }
     }
-    UiTheme {
+    WalletTheme {
         BswapNavHost(backStack)
     }
 }

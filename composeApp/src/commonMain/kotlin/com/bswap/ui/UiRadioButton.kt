@@ -23,7 +23,7 @@ fun UiRadioButton(
 @Preview
 @Composable
 fun UiRadioButtonPreview() {
-    UiTheme {
+    WalletTheme {
         UiRadioButton(selected = true, onClick = {})
     }
 }

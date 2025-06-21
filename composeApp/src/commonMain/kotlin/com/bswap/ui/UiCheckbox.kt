@@ -23,7 +23,7 @@ fun UiCheckbox(
 @Preview
 @Composable
 fun UiCheckboxPreview() {
-    UiTheme {
+    WalletTheme {
         UiCheckbox(checked = true, onCheckedChange = {})
     }
 }

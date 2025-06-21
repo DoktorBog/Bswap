@@ -13,7 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 private val base58Regex = Regex("^[1-9A-HJ-NP-Za-km-z]+")
 
@@ -47,7 +47,7 @@ fun QrAddressTextField(
 @Composable
 private fun QrAddressTextFieldPreview() {
     val (text, setText) = remember { mutableStateOf("") }
-    UiTheme {
+    WalletTheme {
         QrAddressTextField(value = text, onValueChange = setText, onQrClick = {}, label = "Address")
     }
 }

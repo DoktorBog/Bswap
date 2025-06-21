@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import kotlinx.coroutines.delay
 
 /**
@@ -68,7 +68,7 @@ fun SeedRevealDialog(
 @Preview
 @Composable
 private fun SeedRevealDialogPreview() {
-    UiTheme {
+    WalletTheme {
         SeedRevealDialog(seed = "one two three four", onDismiss = {})
     }
 }

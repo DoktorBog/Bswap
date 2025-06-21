@@ -17,7 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 @Composable
 fun SeedInputField(
@@ -53,7 +53,7 @@ fun SeedInputField(
 @Composable
 private fun SeedInputFieldPreview() {
     var text by remember { mutableStateOf("word1 word2 word3") }
-    UiTheme {
+    WalletTheme {
         SeedInputField(value = text, onValueChange = { text = it })
     }
 }

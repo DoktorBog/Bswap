@@ -15,7 +15,7 @@ import com.bswap.navigation.rememberBackStack
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import com.bswap.ui.actions.PrimaryActionBar
 import com.bswap.ui.balance.BalanceCard
 import com.bswap.ui.token.TokenChip
@@ -95,7 +95,7 @@ fun WalletHomeScreen(
 @Preview
 @Composable
 private fun WalletHomeScreenPreview() {
-    UiTheme {
+    WalletTheme {
         WalletHomeScreen(publicKey = "ABCD", backStack = rememberBackStack())
     }
 }

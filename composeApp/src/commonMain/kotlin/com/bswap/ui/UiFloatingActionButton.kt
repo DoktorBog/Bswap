@@ -24,7 +24,7 @@ fun UiFloatingActionButton(
 @Preview
 @Composable
 fun UiFloatingActionButtonPreview() {
-    UiTheme {
+    WalletTheme {
         UiFloatingActionButton(onClick = {}) {
             Icon(Icons.Default.Add, contentDescription = null)
         }

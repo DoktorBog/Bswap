@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 /**
  * Displays overall SOL balance and total token value.
@@ -69,7 +69,7 @@ fun BalanceCard(
 @Preview
 @Composable
 private fun BalanceCardPreview() {
-    UiTheme {
+    WalletTheme {
         BalanceCard(solBalance = "0 SOL", tokensValue = "$0", isLoading = false)
     }
 }

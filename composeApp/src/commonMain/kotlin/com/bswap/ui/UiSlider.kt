@@ -23,7 +23,7 @@ fun UiSlider(
 @Preview
 @Composable
 fun UiSliderPreview() {
-    UiTheme {
+    WalletTheme {
         UiSlider(value = 0.5f, onValueChange = {})
     }
 }

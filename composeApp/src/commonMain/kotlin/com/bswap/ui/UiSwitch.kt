@@ -23,7 +23,7 @@ fun UiSwitch(
 @Preview
 @Composable
 fun UiSwitchPreview() {
-    UiTheme {
+    WalletTheme {
         UiSwitch(checked = false, onCheckedChange = {})
     }
 }

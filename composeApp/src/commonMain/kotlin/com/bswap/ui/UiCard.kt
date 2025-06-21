@@ -26,7 +26,7 @@ fun UiCard(
 @Preview
 @Composable
 fun UiCardPreview() {
-    UiTheme {
+    WalletTheme {
         UiCard { Text("Card content") }
     }
 }
