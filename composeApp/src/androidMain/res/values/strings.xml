@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">Bswap</string>
+    <string name="home">Home</string>
+    <string name="settings">Settings</string>
+    <string name="buy">Buy</string>
+    <string name="send">Send</string>
+    <string name="receive">Receive</string>
+    <string name="swap">Swap</string>
+    <string name="public_key">Public Key</string>
+    <string name="copy">Copy</string>
+    <string name="back">Back</string>
+    <string name="logout">Logout</string>
+    <string name="dark_theme">Dark Theme</string>
+    <string name="language">Language</string>
+    <string name="privacy_policy">Privacy Policy</string>
 </resources>
