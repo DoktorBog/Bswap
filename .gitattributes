@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.kt linguist-language=Kotlin
+*.kts linguist-language=Kotlin
+*.md text
