@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -85,7 +86,7 @@ class HomeViewModel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(publicKey: String, onSettings: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit, modifier: Modifier = Modifier) {
     val client = remember { networkClient() }
     val api = remember(client) { WalletApi(client) }
     val vm: HomeViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -114,6 +115,12 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, modifier: Modifier = M
                     onClick = {},
                     icon = { Icon(Icons.Default.ArrowUpward, contentDescription = Strings.home) },
                     label = { Text(Strings.home) }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onHistory,
+                    icon = { Icon(Icons.Default.History, contentDescription = Strings.history) },
+                    label = { Text(Strings.history) }
                 )
                 NavigationBarItem(
                     selected = false,
@@ -156,14 +163,14 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, modifier: Modifier = M
                         )
                     }
                 }
-                ActionRow()
+                ActionRow(onHistory = onHistory)
             }
         }
     }
 }
 
 @Composable
-fun ActionRow(modifier: Modifier = Modifier) {
+fun ActionRow(onHistory: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -183,6 +190,10 @@ fun ActionRow(modifier: Modifier = Modifier) {
         FilledTonalButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.SwapHoriz, contentDescription = Strings.swap)
             Text(Strings.swap)
+        }
+        FilledTonalButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.History, contentDescription = Strings.history)
+            Text(Strings.history)
         }
     }
 }

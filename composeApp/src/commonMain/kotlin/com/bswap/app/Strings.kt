@@ -7,6 +7,7 @@ object Strings {
     const val send = "Send"
     const val receive = "Receive"
     const val swap = "Swap"
+    const val history = "History"
     const val public_key = "Public Key"
     const val copy = "Copy"
     const val back = "Back"
