@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import com.bswap.shared.model.SolanaTx
 
 /**
@@ -47,7 +47,7 @@ fun TransactionRow(tx: SolanaTx, modifier: Modifier = Modifier) {
 @Preview
 @Composable
 private fun TransactionRowPreview() {
-    UiTheme {
+    WalletTheme {
         TransactionRow(
             tx = SolanaTx("abcdef", "DestinationAddress", 1.23, incoming = true)
         )

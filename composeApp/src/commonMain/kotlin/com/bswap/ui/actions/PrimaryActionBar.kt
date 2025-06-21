@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 /**
  * Action bar with Send, Receive and Buy buttons.
@@ -41,7 +41,7 @@ fun PrimaryActionBar(
 @Preview
 @Composable
 private fun PrimaryActionBarPreview() {
-    UiTheme {
+    WalletTheme {
         PrimaryActionBar(onSend = {}, onReceive = {}, onBuy = {})
     }
 }

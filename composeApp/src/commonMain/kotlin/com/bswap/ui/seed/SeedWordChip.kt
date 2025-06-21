@@ -18,7 +18,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 /**
  * Single word of a seed phrase represented as a chip.
@@ -52,7 +52,7 @@ fun SeedWordChip(
 @Preview
 @Composable
 private fun SeedWordChipPreview() {
-    UiTheme {
+    WalletTheme {
         SeedWordChip(text = "1. solana", onClick = {})
     }
 }

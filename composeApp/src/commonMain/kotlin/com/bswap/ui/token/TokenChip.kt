@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 /**
  * Compact token representation with icon, ticker and balance.
@@ -48,7 +48,7 @@ fun TokenChip(
 @Preview
 @Composable
 private fun TokenChipPreview() {
-    UiTheme {
+    WalletTheme {
         TokenChip(icon = Icons.Default.Star, ticker = "SOL", balance = "1.0", onClick = {})
     }
 }

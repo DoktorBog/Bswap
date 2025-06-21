@@ -1,7 +1,7 @@
 # Migration Guide
 
 This release removes the `BswapTheme` file introduced earlier. All components
-continue to use `UiTheme` which now defines shapes and colours directly.
+continue to use `WalletTheme` which now defines shapes and colours directly.
 
 ## Updating Buttons
 

@@ -1,6 +1,6 @@
 # Compose UI Components
 
-The `composeApp` module provides a small library of Jetpack Compose widgets styled with `UiTheme`. Components automatically adapt to light or dark backgrounds without an additional design system.
+The `composeApp` module provides a small library of Jetpack Compose widgets styled with `WalletTheme`. Components automatically adapt to light or dark backgrounds without an additional design system.
 
 ## Available Components
 
@@ -16,7 +16,7 @@ The `composeApp` module provides a small library of Jetpack Compose widgets styl
 - `UiCircularProgressIndicator` – Indeterminate spinner
 - `UiLinearProgressIndicator` – Linear progress bar
 
-Wrap your UI in `UiTheme` to automatically switch palettes based on the background color.
+Wrap your UI in `WalletTheme` to automatically switch palettes based on the background color.
 
 ## Compose 1.7 Highlights
 

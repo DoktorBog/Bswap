@@ -18,7 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 /**
  * Simple horizontal stepper indicator for onboarding flow.
@@ -71,7 +71,7 @@ private fun StepItem(text: String, active: Boolean, size: Dp = 16.dp) {
 @Preview
 @Composable
 private fun OnboardingStepperPreview() {
-    UiTheme {
+    WalletTheme {
         OnboardingStepper(currentStep = 1)
     }
 }

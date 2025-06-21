@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 import com.bswap.app.copyToClipboard
 
 /**

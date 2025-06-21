@@ -28,7 +28,7 @@ fun UiLinearProgressIndicator(
 @Preview
 @Composable
 fun UiProgressPreview() {
-    UiTheme {
+    WalletTheme {
         UiLinearProgressIndicator()
     }
 }

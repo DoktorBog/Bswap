@@ -16,7 +16,7 @@ import com.bswap.navigation.replaceAll
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.UiTheme
+import com.bswap.ui.WalletTheme
 
 /**
  * Settings screen listing wallet actions.
@@ -55,7 +55,7 @@ fun AccountSettingsScreen(
 @Preview
 @Composable
 private fun AccountSettingsScreenPreview() {
-    UiTheme {
+    WalletTheme {
         AccountSettingsScreen(rememberBackStack())
     }
 }
