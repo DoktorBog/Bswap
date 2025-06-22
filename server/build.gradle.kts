@@ -22,8 +22,6 @@ ktor {
 
 dependencies {
 
-    implementation(libs.wallet.core)
-
     implementation(libs.logback)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
@@ -38,6 +36,9 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.html.jvm)
+    implementation(libs.sol4k)
+    implementation(libs.metaplex.solana)
+    implementation(libs.metaplex.solana.rpc)
 
     implementation(project(":shared"))
 }

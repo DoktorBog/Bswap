@@ -5,6 +5,7 @@ import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
 import com.bswap.server.data.tokenlist.TokenListRepo
 import com.bswap.server.data.solana.jito.JitoBundlerService
 import com.bswap.shared.model.*
+import wallet.core.jni.CoinType
 import org.slf4j.LoggerFactory
 
 class WalletService(

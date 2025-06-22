@@ -16,6 +16,7 @@ import foundation.metaplex.solana.transactions.TransactionInstruction
 import foundation.metaplex.solanapublickeys.PublicKey
 import wallet.core.jni.PrivateKey
 import wallet.core.jni.Curve
+import foundation.metaplex.base58.encodeToBase58String
 import com.bswap.server.data.solana.transaction.SolanaEddsa
 import org.sol4k.VersionedTransaction
 import java.math.BigDecimal
@@ -26,8 +27,8 @@ data class TransactionExecutionResult(
 )
 
 data class SolanaKeypair(
-    override val publicKey: com.solana.publickey.PublicKey,
-    override val secretKey: ByteArray
+    val publicKey: com.solana.publickey.PublicKey,
+    val secretKey: ByteArray
 )
 
 class HotSigner(private val keyPair: SolanaKeypair) : Signer {
@@ -63,7 +64,7 @@ suspend fun executeSolTransaction(
 ) {
 
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
-    val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
+    val signer = HotSigner(SolanaKeypair(PublicKey(k.publicKey), k.secretKey))
     val latestBlockhash = rpc.getLatestBlockhash(null)
     val transaction: Transaction = SolanaTransactionBuilder()
         .addInstruction(transactionInstruction)
@@ -77,7 +78,7 @@ suspend fun createTransactionWithInstructions(
     transactionInstruction: List<TransactionInstruction>,
 ): Transaction {
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
-    val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
+    val signer = HotSigner(SolanaKeypair(PublicKey(k.publicKey), k.secretKey))
     val latestBlockhash = rpc.getLatestBlockhash(null)
     return SolanaTransactionBuilder()
         .apply {
@@ -104,12 +105,12 @@ suspend fun createSolTransaction(
     toPublicKey: PublicKey = PublicKey(""),
 ): Transaction {
     val k = SolanaEddsa.createKeypairFromSecretKey(privateKey.decodeBase58().copyOfRange(0, 32))
-    val signer = HotSigner(SolanaKeypair(k.publicKey, k.secretKey))
+    val signer = HotSigner(SolanaKeypair(PublicKey(k.publicKey), k.secretKey))
     val latestBlockhash = rpc.getLatestBlockhash(null)
     return SolanaTransactionBuilder()
         .addInstruction(
             transfer(
-                k.publicKey,
+                PublicKey(k.publicKey),
                 toPublicKey,
                 amount?.formatLamports() ?: (lamports ?: 0L)
             )
