@@ -33,7 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import org.koin.compose.koinViewModel
 import com.bswap.app.models.ConfirmSeedViewModel
 import com.bswap.data.seedStorage
 import com.bswap.navigation.NavKey
@@ -49,7 +49,7 @@ fun ConfirmSeedScreen(
     mnemonic: List<String>,
     backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier,
-    viewModel: ConfirmSeedViewModel = viewModel()
+    viewModel: ConfirmSeedViewModel = koinViewModel()
 ) {
     val available = remember { mutableStateListOf(*mnemonic.shuffled().toTypedArray()) }
     val selected = remember { mutableStateListOf<String>() }

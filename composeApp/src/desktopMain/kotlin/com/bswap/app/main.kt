@@ -2,17 +2,19 @@ package com.bswap.app
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
-import com.bswap.app.ComposeApp
+import com.bswap.app.BswapApp
 import com.bswap.navigation.rememberBackStack
-import com.bswap.app.di.initKoin
+import org.koin.compose.KoinMultiplatformApplication
+import com.bswap.app.di.appModule
 
 fun main() = application {
-    initKoin()
-    Window(
+    KoinMultiplatformApplication(application = { modules(appModule) }) {
+        Window(
         onCloseRequest = ::exitApplication,
         title = "Bswap",
-    ) {
-        val backStack = rememberBackStack()
-        ComposeApp(backStack)
+        ) {
+            val backStack = rememberBackStack()
+            BswapApp(backStack)
+        }
     }
 }

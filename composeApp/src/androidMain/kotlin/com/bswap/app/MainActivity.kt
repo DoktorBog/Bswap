@@ -6,16 +6,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.OnBackPressedCallback
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.bswap.app.ComposeApp
+import com.bswap.app.BswapApp
 import com.bswap.navigation.rememberBackStack
 import com.bswap.navigation.pop
-import com.bswap.app.di.initKoin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        initKoin()
-
         setContent {
             val backStack = rememberBackStack()
             onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -23,7 +20,7 @@ class MainActivity : ComponentActivity() {
                     if (backStack.size > 1) backStack.pop() else finish()
                 }
             })
-            ComposeApp(backStack)
+            BswapApp(backStack)
         }
     }
 }
@@ -31,5 +28,5 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    ComposeApp()
+    BswapApp()
 }
