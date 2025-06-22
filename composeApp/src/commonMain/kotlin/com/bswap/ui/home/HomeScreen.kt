@@ -35,16 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.ViewModelProvider
 import com.bswap.app.Strings
-import com.bswap.app.networkClient
-import com.bswap.app.api.WalletApi
-import com.bswap.app.models.WalletViewModel
 import com.bswap.ui.TrianglesBackground
 import com.bswap.ui.account.AccountHeader
 import com.bswap.ui.balance.BalanceCard
 import com.bswap.ui.token.TokenChip
+import org.koin.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -87,14 +84,7 @@ class HomeViewModel(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit, modifier: Modifier = Modifier) {
-    val client = remember { networkClient() }
-    val api = remember(client) { WalletApi(client) }
-    val vm: HomeViewModel = viewModel(factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return HomeViewModel(api, publicKey) as T
-        }
-    })
+    val vm: HomeViewModel = koinViewModel(parameters = { parametersOf(publicKey) })
     val state by vm.uiState.collectAsState()
 
     Scaffold(

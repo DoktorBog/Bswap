@@ -27,6 +27,7 @@ bitcoinj = "0.17"
 wallet-core = "0.3.7"
 androidx-datastore = "1.0.0"
 androidx-security-crypto = "1.1.0-alpha06"
+koin = "4.1.0"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -74,6 +75,9 @@ bitcoinj-core = { module = "org.bitcoinj:bitcoinj-core", version.ref = "bitcoinj
 wallet-core = { module = "com.portto:walletcore", version.ref = "wallet-core" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidx-datastore" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "androidx-security-crypto" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

@@ -49,6 +49,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.androidx.security.crypto)
+            implementation(libs.koin.android)
             implementation("org.bitcoinj:bitcoinj-core:${libs.versions.bitcoinj.get()}") {
                 exclude(group = "com.google.protobuf", module = "protobuf-javalite")
             }
@@ -65,6 +66,8 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.client.core)

@@ -15,28 +15,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.bswap.app.Strings
-import com.bswap.app.networkClient
-import com.bswap.app.api.WalletApi
 import com.bswap.app.models.WalletViewModel
 import com.bswap.ui.TrianglesBackground
 import com.bswap.ui.tx.TransactionRow
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.ViewModelProvider
+import org.koin.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Modifier = Modifier) {
-    val client = remember { networkClient() }
-    val api = remember(client) { WalletApi(client) }
-    val vm: WalletViewModel = viewModel(factory = object : ViewModelProvider.Factory {
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return WalletViewModel(api, publicKey) as T
-        }
-    })
+    val vm: WalletViewModel = koinViewModel(parameters = { parametersOf(publicKey) })
     val history by vm.history.collectAsState()
 
     Scaffold(
