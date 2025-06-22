@@ -13,12 +13,12 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.wallet.core)
+                implementation(libs.sol4k)
             }
         }
         val jvmMain by getting {
             dependencies {
-                implementation(libs.wallet.core)
+                implementation(libs.sol4k)
             }
         }
         val androidMain by getting {

@@ -76,9 +76,24 @@ class SolanaRpcClient(
         }.bodyAsText()
         val element = runCatching { json.parseToJsonElement(text) }.getOrNull() ?: return emptyList()
         val values = element.jsonObject["result"]?.jsonArray ?: return emptyList()
-        return values.mapNotNull { item ->
-            val signature = item.jsonObject["signature"]?.jsonPrimitive?.content
-            signature?.let { SolanaTx(signature = it, address = address) }
+        val signatures = values.mapNotNull { it.jsonObject["signature"]?.jsonPrimitive?.content }
+        val txs = mutableListOf<SolanaTx>()
+        for (sig in signatures) {
+            val txReq =
+                """{"jsonrpc":"2.0","id":1,"method":"getTransaction","params":["$sig",{"encoding":"jsonParsed"}]}"""
+            val txText = client.post(rpcUrl) {
+                contentType(ContentType.Application.Json)
+                setBody(txReq)
+            }.bodyAsText()
+            val txEl = runCatching { json.parseToJsonElement(txText) }.getOrNull() ?: continue
+            val meta = txEl.jsonObject["result"]?.jsonObject?.get("meta")?.jsonObject ?: continue
+            val pre = meta["preBalances"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.long ?: continue
+            val post = meta["postBalances"]?.jsonArray?.getOrNull(0)?.jsonPrimitive?.long ?: continue
+            val change = post - pre
+            val amount = change.toDouble() / 1_000_000_000.0
+            val incoming = change > 0
+            txs += SolanaTx(signature = sig, address = address, amount = amount, incoming = incoming)
         }
+        return txs
     }
 }
