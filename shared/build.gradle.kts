@@ -5,9 +5,13 @@ plugins {
 }
 
 kotlin {
+    val enableWasm = project.findProperty("enableWasm") == "true"
+
     androidTarget()
     jvm()
-    wasmJs()
+    if (enableWasm) {
+        wasmJs()
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -26,7 +30,9 @@ kotlin {
                 implementation(libs.wallet.core)
             }
         }
-        val wasmJsMain by getting
+        if (enableWasm) {
+            val wasmJsMain by getting
+        }
     }
 }
 
