@@ -10,6 +10,7 @@ import com.bswap.navigation.replaceAll
 import com.bswap.ui.WalletTheme
 import androidx.compose.ui.tooling.preview.Preview
 import com.bswap.data.seedStorage
+import com.bswap.app.di.initKoin
 
 /**
  * Entry composable launching the Bswap navigation flow.
@@ -31,5 +32,6 @@ fun ComposeApp(backStack: SnapshotStateList<NavKey> = rememberBackStack()) {
 @Preview
 @Composable
 private fun ComposeAppPreview() {
+    initKoin()
     ComposeApp()
 }

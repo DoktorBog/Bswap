@@ -9,10 +9,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.bswap.app.ComposeApp
 import com.bswap.navigation.rememberBackStack
 import com.bswap.navigation.pop
+import com.bswap.app.di.initKoin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initKoin()
 
         setContent {
             val backStack = rememberBackStack()

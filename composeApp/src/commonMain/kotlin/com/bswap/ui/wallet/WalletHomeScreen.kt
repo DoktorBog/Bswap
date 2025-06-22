@@ -19,9 +19,9 @@ import com.bswap.ui.WalletTheme
 import com.bswap.ui.actions.PrimaryActionBar
 import com.bswap.ui.balance.BalanceCard
 import com.bswap.ui.token.TokenChip
-import com.bswap.app.networkClient
-import com.bswap.app.api.WalletApi
 import com.bswap.app.models.WalletViewModel
+import org.koin.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 import com.bswap.ui.tx.TransactionRow
 import com.bswap.navigation.replaceAll
 import androidx.compose.material.icons.Icons
@@ -42,9 +42,7 @@ fun WalletHomeScreen(
     backStack: SnapshotStateList<NavKey>,
     modifier: Modifier = Modifier
 ) {
-    val client = remember { networkClient() }
-    val api = remember(client) { WalletApi(client) }
-    val viewModel = remember { WalletViewModel(api, publicKey) }
+    val viewModel: WalletViewModel = koinViewModel(parameters = { parametersOf(publicKey) })
 
     val walletInfo by viewModel.walletInfo.collectAsState()
     val loading by viewModel.isLoading.collectAsState()
