@@ -17,4 +17,6 @@ object Strings {
     const val dark_theme = "Dark Theme"
     const val language = "Language"
     const val privacy_policy = "Privacy Policy"
+    const val activity = "Activity"
+    const val wallet = "Wallet"
 }

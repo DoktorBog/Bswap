@@ -1,45 +1,25 @@
 package com.bswap.ui.home
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.bswap.app.Strings
-import com.bswap.ui.TrianglesBackground
-import com.bswap.ui.account.AccountHeader
-import com.bswap.ui.balance.BalanceCard
-import com.bswap.ui.token.TokenChip
 import org.koin.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 import androidx.lifecycle.viewModelScope
@@ -88,102 +68,95 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit,
     val state by vm.uiState.collectAsState()
 
     Scaffold(
+        containerColor = Color(0xFF1A1A1A),
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(Strings.home) },
-                actions = {
-                    IconButton(onClick = onSettings) {
-                        Icon(Icons.Default.Settings, contentDescription = Strings.settings)
-                    }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onSettings) {
+                    Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White)
                 }
-            )
+                IconButton(onClick = onHistory) {
+                    Icon(Icons.Default.History, contentDescription = Strings.history, tint = Color.White)
+                }
+            }
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(containerColor = Color(0xFF262626)) {
                 NavigationBarItem(
                     selected = true,
                     onClick = {},
-                    icon = { Icon(Icons.Default.ArrowUpward, contentDescription = Strings.home) },
-                    label = { Text(Strings.home) }
+                    icon = { Icon(Icons.Default.List, contentDescription = Strings.activity) },
+                    label = { Text(Strings.activity) },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color.White, unselectedIconColor = Color.White, unselectedTextColor = Color.White, indicatorColor = Color.Transparent)
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = onHistory,
-                    icon = { Icon(Icons.Default.History, contentDescription = Strings.history) },
-                    label = { Text(Strings.history) }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = onSettings,
-                    icon = { Icon(Icons.Default.Settings, contentDescription = Strings.settings) },
-                    label = { Text(Strings.settings) }
+                    onClick = {},
+                    icon = { Icon(Icons.Default.Wallet, contentDescription = Strings.wallet) },
+                    label = { Text(Strings.wallet) },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Color(0xFFADADAD), selectedTextColor = Color(0xFFADADAD), unselectedIconColor = Color(0xFFADADAD), unselectedTextColor = Color(0xFFADADAD), indicatorColor = Color.Transparent)
                 )
             }
         },
         modifier = modifier.fillMaxSize()
     ) { inner ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(inner)
-                .fillMaxSize()
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            TrianglesBackground(modifier = Modifier.matchParentSize())
-            Column(
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(text = state.portfolio, color = Color.White, style = MaterialTheme.typography.headlineLarge)
+            Row(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(vertical = 16.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
-                AccountHeader(publicKey = publicKey, onCopy = {})
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(4.dp)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(text = state.portfolio, style = MaterialTheme.typography.headlineSmall)
-                    }
+                FilledTonalButton(onClick = {}, modifier = Modifier.weight(1f)) {
+                    Text(Strings.buy)
                 }
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(state.assets) { asset ->
-                        TokenChip(
-                            icon = Icons.Default.Star,
-                            ticker = asset.symbol,
-                            balance = asset.balance,
-                            onClick = {}
-                        )
-                    }
+                FilledTonalButton(onClick = {}, modifier = Modifier.weight(1f)) {
+                    Text(Strings.receive)
                 }
-                ActionRow(onHistory = onHistory)
+            }
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(state.assets) { asset ->
+                    AssetRow(asset)
+                }
             }
         }
     }
 }
 
+
 @Composable
-fun ActionRow(onHistory: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun AssetRow(asset: Asset) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        FilledTonalButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.ShoppingCart, contentDescription = Strings.buy)
-            Text(Strings.buy)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color(0xFF363636), shape = MaterialTheme.shapes.small),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = Color.White)
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(asset.symbol, color = Color.White, style = MaterialTheme.typography.bodyMedium)
         }
-        FilledTonalButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.ArrowUpward, contentDescription = Strings.send)
-            Text(Strings.send)
-        }
-        FilledTonalButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.ArrowDownward, contentDescription = Strings.receive)
-            Text(Strings.receive)
-        }
-        FilledTonalButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.SwapHoriz, contentDescription = Strings.swap)
-            Text(Strings.swap)
-        }
-        FilledTonalButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.History, contentDescription = Strings.history)
-            Text(Strings.history)
-        }
+        Text(asset.balance, color = Color.White, style = MaterialTheme.typography.bodyMedium)
     }
 }
