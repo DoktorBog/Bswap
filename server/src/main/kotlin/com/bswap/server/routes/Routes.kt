@@ -39,7 +39,9 @@ fun Route.walletRoutes(service: WalletService) {
             HttpStatusCode.BadRequest,
             ApiError("missing address")
         )
-        val result = service.getHistory(address)
+        val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
+        val cursor = call.request.queryParameters["cursor"]
+        val result = service.getHistory(address, limit, cursor)
         result.onSuccess { call.respond(it) }
             .onFailure { call.respond(HttpStatusCode.InternalServerError, ApiError(it.message ?: "error")) }
     }
