@@ -7,6 +7,7 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 
@@ -24,8 +25,17 @@ class WalletApi(private val client: HttpClient) {
     suspend fun getTokens(address: String): List<TokenInfo> =
         client.get("$baseUrl/wallet/$address/tokens").body()
 
-    suspend fun getHistory(address: String): List<SolanaTx> =
-        client.get("$baseUrl/wallet/$address/history").body()
+    suspend fun getHistory(
+        address: String,
+        limit: Int = 10,
+        cursor: String? = null,
+    ): HistoryPage =
+        client.get("$baseUrl/wallet/$address/history") {
+            url {
+                parameters.append("limit", limit.toString())
+                cursor?.let { parameters.append("cursor", it) }
+            }
+        }.body()
 
     suspend fun swap(request: SwapRequest): SwapTx =
         client.post("$baseUrl/swap") {
