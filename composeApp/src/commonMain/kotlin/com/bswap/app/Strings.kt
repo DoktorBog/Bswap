@@ -1,8 +1,6 @@
 package com.bswap.app
 
 object Strings {
-    const val activity = "Activity"
-    const val wallet = "Wallet"
     const val home = "Home"
     const val settings = "Settings"
     const val buy = "Buy"
