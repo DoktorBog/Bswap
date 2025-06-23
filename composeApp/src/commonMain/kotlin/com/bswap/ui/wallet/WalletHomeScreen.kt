@@ -7,31 +7,29 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import com.bswap.navigation.NavKey
-import com.bswap.navigation.rememberBackStack
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bswap.ui.WalletTheme
+import com.bswap.app.models.WalletViewModel
+import com.bswap.navigation.NavKey
+import com.bswap.navigation.replaceAll
+import com.bswap.ui.UiButton
 import com.bswap.ui.actions.PrimaryActionBar
 import com.bswap.ui.balance.BalanceCard
 import com.bswap.ui.token.TokenChip
-import com.bswap.app.models.WalletViewModel
-import org.koin.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
 import com.bswap.ui.tx.TransactionRow
-import com.bswap.navigation.replaceAll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.runtime.collectAsState
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.ui.Alignment
-import com.bswap.ui.UiButton
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 /**
  * Main wallet home screen showing balance and recent transactions.
@@ -87,13 +85,5 @@ fun WalletHomeScreen(
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
         }
-    }
-}
-
-@Preview
-@Composable
-private fun WalletHomeScreenPreview() {
-    WalletTheme {
-        WalletHomeScreen(publicKey = "ABCD", backStack = rememberBackStack())
     }
 }

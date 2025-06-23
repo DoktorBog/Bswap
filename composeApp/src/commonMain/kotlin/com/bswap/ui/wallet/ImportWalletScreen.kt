@@ -15,12 +15,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.bswap.navigation.NavKey
-import com.bswap.navigation.rememberBackStack
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.replaceAll
 import androidx.compose.ui.unit.dp
 import com.bswap.ui.UiButton
-import com.bswap.ui.WalletTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import com.bswap.ui.seed.SeedInputField
@@ -28,9 +26,8 @@ import com.bswap.data.seedStorage
 import com.bswap.shared.wallet.toBase58
 import com.bswap.ui.TrianglesBackground
 import com.bswap.ui.UiRadioButton
-import wallet.core.jni.CoinType
-import com.bswap.shared.wallet.toBase58
 import kotlinx.coroutines.launch
+import wallet.core.jni.CoinType
 
 @Composable
 fun ImportWalletScreen(
