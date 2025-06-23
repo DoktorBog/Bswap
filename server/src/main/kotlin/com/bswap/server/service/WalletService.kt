@@ -35,8 +35,12 @@ class WalletService(
         Result.failure(e)
     }
 
-    suspend fun getHistory(address: String): Result<List<SolanaTx>> = try {
-        Result.success(rpcClient.getHistory(address))
+    suspend fun getHistory(
+        address: String,
+        limit: Int = 10,
+        before: String? = null,
+    ): Result<HistoryPage> = try {
+        Result.success(rpcClient.getHistory(address, limit, before))
     } catch (e: Exception) {
         Result.failure(e)
     }

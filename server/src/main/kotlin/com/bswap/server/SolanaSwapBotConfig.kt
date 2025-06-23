@@ -5,7 +5,7 @@ import java.math.BigDecimal
 import java.io.File
 
 data class SolanaSwapBotConfig(
-    val walletPublicKey: PublicKey = PublicKey(""),
+    val walletPublicKey: PublicKey = PublicKey("F277zfVkW6VBfkfWPNVXKoBEgCCeVcFYdiZDUX9yCPDW"),
     val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
     val solAmountToTrade: BigDecimal = BigDecimal("0.0005"),
     val autoSellAllSpl: Boolean = true,

@@ -12,17 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -30,20 +30,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.koin.compose.koinViewModel
 import com.bswap.app.models.ConfirmSeedViewModel
 import com.bswap.data.seedStorage
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.pop
 import com.bswap.navigation.replaceAll
 import com.bswap.seed.SeedPhraseValidator
-import wallet.core.jni.CoinType
 import com.bswap.shared.wallet.toBase58
 import kotlinx.coroutines.launch
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+import org.koin.compose.viewmodel.koinViewModel
+import wallet.core.jni.CoinType
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfirmSeedScreen(
     mnemonic: List<String>,
