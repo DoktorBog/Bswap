@@ -25,9 +25,9 @@ import com.bswap.ui.UiButton
 private data class Slide(val title: String)
 
 private val slides = listOf(
-    Slide("Trade SPL tokens easily"),
-    Slide("Secure your funds"),
-    Slide("Open source wallet")
+    Slide("Automated Solana Trading"),
+    Slide("Advanced Bot Controls"),
+    Slide("Real-time Analytics")
 )
 
 @Composable
@@ -51,14 +51,22 @@ fun OnboardingWelcomeScreen(
                 Text(slide.title, style = MaterialTheme.typography.headlineMedium)
             }
         }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            UiButton(text = "Create Wallet", onClick = { backStack.push(NavKey.GenerateSeed) }, modifier = Modifier.weight(1f))
-            UiButton(text = "Import Wallet", onClick = { backStack.push(NavKey.ImportWallet) }, secondary = true, modifier = Modifier.weight(1f))
+            UiButton(
+                text = "Start Bot Control",
+                onClick = { backStack.push(NavKey.BotDashboard) },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Control your trading bot remotely",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
     }
 }

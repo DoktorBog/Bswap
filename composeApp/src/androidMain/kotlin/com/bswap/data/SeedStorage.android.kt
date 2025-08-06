@@ -62,7 +62,7 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
         strategy: WalletDerivationStrategy,
         coin: CoinType
     ): Keypair = withContext(Dispatchers.Default) {
-        val keypair = strategy.deriveKeypair(mnemonic, accountIndex)
+        val keypair = strategy.deriveKeypair(mnemonic, accountIndex, "")
 
         prefs.edit(commit = true) {
             putString(KEY_PUB, keypair.publicKey.toBase58())

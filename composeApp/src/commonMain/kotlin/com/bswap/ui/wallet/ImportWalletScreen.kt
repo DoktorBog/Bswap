@@ -36,12 +36,12 @@ fun ImportWalletScreen(
 ) {
     val (text, setText) = remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    val coins = listOf(CoinType.SOLANA, CoinType.ETHEREUM, CoinType.BITCOIN)
+    val coins = listOf(CoinType.SOLANA)
     val selected = remember { mutableStateOf(CoinType.SOLANA) }
     Box(
         modifier = modifier
             .fillMaxSize()
-            .testTag(NavKey.ImportWallet::class.simpleName!!)
+            .testTag("ImportWallet")
     ) {
         TrianglesBackground(modifier = Modifier.matchParentSize())
         Column(
@@ -67,7 +67,7 @@ fun ImportWalletScreen(
                         val keypair = seedStorage().createWallet(words, coin = selected.value)
                         seedStorage().saveSeed(words)
                         seedStorage().savePublicKey(keypair.publicKey.toBase58())
-                        backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
+                        backStack.replaceAll(NavKey.BotDashboard)
                     }
                 },
                 modifier = Modifier.fillMaxWidth()

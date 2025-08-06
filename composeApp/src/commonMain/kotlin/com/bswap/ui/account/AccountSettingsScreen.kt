@@ -37,7 +37,7 @@ fun AccountSettingsScreen(
     LazyColumn(
         modifier = modifier
             .padding(16.dp)
-            .testTag(NavKey.AccountSettings::class.simpleName!!),
+            .testTag("AccountSettings"),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(items) { (title, callback) ->

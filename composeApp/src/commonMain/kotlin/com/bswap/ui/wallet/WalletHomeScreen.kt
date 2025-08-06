@@ -48,7 +48,7 @@ fun WalletHomeScreen(
 
     val solBalanceText = walletInfo?.lamports?.let { "${it / 1_000_000_000.0} SOL" } ?: "0 SOL"
     val tokens = walletInfo?.tokens ?: emptyList()
-    Box(modifier = modifier.testTag(NavKey.WalletHome::class.simpleName!!)) {
+    Box(modifier = modifier.testTag("WalletHome")) {
         Column(
             modifier = Modifier
                 .padding(16.dp)

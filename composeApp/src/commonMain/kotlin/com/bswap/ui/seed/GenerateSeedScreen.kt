@@ -56,7 +56,7 @@ fun GenerateSeedScreen(
     Column(
         modifier = modifier
             .padding(16.dp)
-            .testTag(NavKey.GenerateSeed::class.simpleName!!),
+            .testTag("GenerateSeed"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(modifier = Modifier.weight(1f)) {
@@ -91,7 +91,7 @@ fun GenerateSeedScreen(
             Text("Enable biometrics")
             Switch(checked = useBiometrics, onCheckedChange = { useBiometrics = it })
         }
-        UiButton(text = "Next", onClick = { backStack.push(NavKey.ConfirmSeed(seedWords)) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Next", onClick = { backStack.push(NavKey.BotDashboard) }, modifier = Modifier.fillMaxWidth())
     }
 }
 

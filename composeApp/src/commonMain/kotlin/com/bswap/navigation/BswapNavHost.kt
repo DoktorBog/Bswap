@@ -3,15 +3,13 @@ package com.bswap.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import com.bswap.navigation.NavDisplay
-import com.bswap.ui.settings.SettingsScreen
-import com.bswap.ui.onboarding.ChoosePathScreen
 import com.bswap.ui.onboarding.OnboardingWelcomeScreen
-import com.bswap.ui.seed.ConfirmSeedScreen
-import com.bswap.ui.seed.GenerateSeedScreen
-import com.bswap.ui.wallet.ImportWalletScreen
-import com.bswap.ui.home.HomeScreen
-import com.bswap.ui.history.TransactionHistoryScreen
-import com.bswap.ui.bot.BotControlScreen
+import com.bswap.ui.bot.BotDashboardScreen
+import com.bswap.ui.bot.BotSettingsScreen
+import com.bswap.ui.bot.BotAnalyticsScreen
+import com.bswap.ui.bot.BotWalletScreen
+import com.bswap.ui.bot.BotHistoryScreen
+import com.bswap.ui.bot.BotAlertsScreen
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 
@@ -20,26 +18,26 @@ fun BswapNavHost(backStack: SnapshotStateList<NavKey>) {
     NavDisplay(backStack, enter = { slideInHorizontally(initialOffsetX = { it }) }, exit = { slideOutHorizontally(targetOffsetX = { -it }) }) { key ->
         when (key) {
             NavKey.Welcome -> OnboardingWelcomeScreen(backStack)
-            NavKey.ChoosePath -> ChoosePathScreen(backStack)
-            NavKey.GenerateSeed -> GenerateSeedScreen(backStack)
-            is NavKey.ConfirmSeed -> ConfirmSeedScreen(key.words, backStack)
-            NavKey.ImportWallet -> ImportWalletScreen(backStack)
-            is NavKey.WalletHome -> HomeScreen(
-                publicKey = key.publicKey,
-                onSettings = { backStack.push(NavKey.AccountSettings(key.publicKey)) },
-                onHistory = { backStack.push(NavKey.TransactionHistory(key.publicKey)) },
-                onBotControl = { backStack.push(NavKey.BotControl) }
+            NavKey.BotDashboard -> BotDashboardScreen(
+                onNavigateToSettings = { backStack.push(NavKey.BotSettings) },
+                onNavigateToAnalytics = { backStack.push(NavKey.BotAnalytics) },
+                onNavigateToWallet = { backStack.push(NavKey.BotWallet) },
+                onNavigateToHistory = { backStack.push(NavKey.BotHistory) },
+                onNavigateToAlerts = { backStack.push(NavKey.BotAlerts) }
             )
-            is NavKey.AccountSettings -> SettingsScreen(
-                publicKey = key.publicKey,
-                onBack = { backStack.pop() },
-                onLogout = { backStack.replaceAll(NavKey.Welcome) }
-            )
-            is NavKey.TransactionHistory -> TransactionHistoryScreen(
-                publicKey = key.publicKey,
+            NavKey.BotSettings -> BotSettingsScreen(
                 onBack = { backStack.pop() }
             )
-            NavKey.BotControl -> BotControlScreen(
+            NavKey.BotAnalytics -> BotAnalyticsScreen(
+                onBack = { backStack.pop() }
+            )
+            NavKey.BotWallet -> BotWalletScreen(
+                onBack = { backStack.pop() }
+            )
+            NavKey.BotHistory -> BotHistoryScreen(
+                onBack = { backStack.pop() }
+            )
+            NavKey.BotAlerts -> BotAlertsScreen(
                 onBack = { backStack.pop() }
             )
         }

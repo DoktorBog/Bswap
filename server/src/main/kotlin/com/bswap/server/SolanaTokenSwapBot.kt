@@ -81,6 +81,7 @@ class SolanaTokenSwapBot(
             "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
         )
     ),
+
     private val managementService: com.bswap.server.service.BotManagementService? = null,
     private val tokenValidator: TokenValidator = TokenValidator(client)
 ) {

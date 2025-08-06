@@ -24,7 +24,7 @@ object ServerConfig {
         .split(',').map { it.trim() }
 
     val pumpFunWsUrl: String = System.getenv("PUMPFUN_WS_URL") ?: "wss://pumpportal.fun/api/data"
-    val pumpFunBaseUrl: String = System.getenv("PUMPFUN_BASE_URL") ?: "https://frontend-api.pump.fun/coins"
+    val pumpFunBaseUrl: String = System.getenv("PUMPFUN_BASE_URL") ?: "https://frontend-api-v3.pump.fun/coins"
 
     val logMonitorUrl: String = System.getenv("LOG_MONITOR_URL") ?: "https://api.mainnet-beta.solana.com"
     val poolMonitorUrl: String = System.getenv("POOL_MONITOR_URL")

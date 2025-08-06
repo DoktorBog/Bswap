@@ -28,11 +28,11 @@ fun ChoosePathScreen(
         modifier = modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .testTag(NavKey.ChoosePath::class.simpleName!!),
+            .testTag("ChoosePath"),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        UiButton(text = "Create", onClick = { backStack.push(NavKey.GenerateSeed) }, modifier = Modifier.fillMaxWidth())
-        UiButton(text = "Import", onClick = { backStack.push(NavKey.ImportWallet) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Create", onClick = { backStack.push(NavKey.BotDashboard) }, modifier = Modifier.fillMaxWidth())
+        UiButton(text = "Import", onClick = { backStack.push(NavKey.BotDashboard) }, modifier = Modifier.fillMaxWidth())
     }
 }
 

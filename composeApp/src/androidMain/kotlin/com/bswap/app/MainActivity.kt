@@ -13,6 +13,10 @@ import com.bswap.navigation.pop
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize app context for platform-specific operations
+        initializeAppContext(applicationContext)
+        
         setContent {
             val backStack = rememberBackStack()
             onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

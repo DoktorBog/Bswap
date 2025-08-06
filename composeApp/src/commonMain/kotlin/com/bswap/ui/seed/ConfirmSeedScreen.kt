@@ -86,7 +86,7 @@ fun ConfirmSeedScreen(
             modifier = modifier
                 .padding(padding)
                 .padding(16.dp)
-                .testTag(NavKey.ConfirmSeed::class.simpleName!!),
+                .testTag("ConfirmSeed"),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -136,7 +136,7 @@ fun ConfirmSeedScreen(
                         } else {
                             val keypair = seedStorage().createWallet(mnemonic, coin = CoinType.SOLANA)
                             seedStorage().savePublicKey(keypair.publicKey.toBase58())
-                            backStack.replaceAll(NavKey.WalletHome(keypair.publicKey.toBase58()))
+                            backStack.replaceAll(NavKey.BotDashboard)
                         }
                     }
                 },
