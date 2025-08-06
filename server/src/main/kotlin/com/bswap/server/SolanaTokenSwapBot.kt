@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val logger = LoggerFactory.getLogger("SolanaTokenSwapBot")
 
@@ -92,7 +93,7 @@ class SolanaTokenSwapBot(
     fun start() {
         if (_isActive.get()) return
         _isActive.set(true)
-        
+
         // 1) Periodically sell all SPL tokens
         if (config.autoSellAllSpl) {
             scope.launch {
@@ -118,19 +119,19 @@ class SolanaTokenSwapBot(
                 clearUnboughtCoins()
             }
         }
-        
+
         logger.info("SolanaTokenSwapBot started")
     }
-    
+
     fun stop() {
         _isActive.set(false)
         logger.info("SolanaTokenSwapBot stopped")
     }
-    
+
     fun isActive(): Boolean = _isActive.get()
-    
+
     fun getCurrentState(): Map<String, TokenStatus> = stateMap.toMap()
-    
+
     fun getActiveTokensCount(): Int = stateMap.size
 
     /** Let external callers request a single trade. */
@@ -199,7 +200,7 @@ class SolanaTokenSwapBot(
                 managementService?.incrementFailedTrades()
                 return@launch
             }
-            
+
             if (validationResult.riskScore > 0.7) {
                 logger.warn("Token $mint has high risk score: ${validationResult.riskScore}")
                 stateMap[mint]?.state = TokenState.SellFailed("High risk token: risk score ${validationResult.riskScore}")
