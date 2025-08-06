@@ -22,6 +22,6 @@ data class Link(
 )
 
 @Serializable
-data class ApiResponse(
+data class TokenProfileResponse(
     val tokens: List<TokenProfile>
 )

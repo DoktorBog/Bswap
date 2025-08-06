@@ -14,6 +14,7 @@ import com.bswap.server.data.solana.transaction.createTransactionWithInstruction
 import com.bswap.server.data.solana.transaction.executeSolTransaction
 import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.data.solana.transaction.getTokenAccountsByOwner
+import com.bswap.server.validation.TokenValidator
 import foundation.metaplex.rpc.networking.NetworkDriver
 import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.coroutines.CoroutineScope
@@ -78,18 +79,24 @@ class SolanaTokenSwapBot(
             "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
             "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
         )
-    )
+    ),
+    private val managementService: com.bswap.server.service.BotManagementService? = null,
+    private val tokenValidator: TokenValidator = TokenValidator(client)
 ) {
     private var processingTokens = AtomicInteger(0)
     private val stateMap = ConcurrentHashMap<String, TokenStatus>()
     private val lastSell = ConcurrentHashMap<String, Long>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val _isActive = AtomicBoolean(true)
 
-    init {
+    fun start() {
+        if (_isActive.get()) return
+        _isActive.set(true)
+        
         // 1) Periodically sell all SPL tokens
         if (config.autoSellAllSpl) {
             scope.launch {
-                while (isActive) {
+                while (_isActive.get()) {
                     sellAllOnce()
                     delay(config.sellAllSplIntervalMs)
                 }
@@ -98,28 +105,33 @@ class SolanaTokenSwapBot(
 
         // 2) Periodically close zero-balance accounts
         scope.launch {
-            while (isActive) {
+            while (_isActive.get()) {
                 closeZeroAccounts()
                 delay(config.closeAccountsIntervalMs)
             }
         }
 
-        //// 3) Periodically clear the state map
-        //scope.launch {
-        //    while (isActive) {
-        //        delay(config.clearMapIntervalMs)
-        //        stateMap.clear()
-        //    }
-        //}
-
-        // 4) Periodically remove tokens that have been TradePending > 30 seconds
+        // 3) Periodically remove tokens that have been TradePending > 30 seconds
         scope.launch {
-            while (isActive) {
+            while (_isActive.get()) {
                 delay(5_000) // check every 5 seconds
                 clearUnboughtCoins()
             }
         }
+        
+        logger.info("SolanaTokenSwapBot started")
     }
+    
+    fun stop() {
+        _isActive.set(false)
+        logger.info("SolanaTokenSwapBot stopped")
+    }
+    
+    fun isActive(): Boolean = _isActive.get()
+    
+    fun getCurrentState(): Map<String, TokenStatus> = stateMap.toMap()
+    
+    fun getActiveTokensCount(): Int = stateMap.size
 
     /** Let external callers request a single trade. */
     fun singleTrade(mint: String) = trade(mint)
@@ -179,6 +191,21 @@ class SolanaTokenSwapBot(
         stateMap[mint] = TokenStatus(mint, TokenState.TradePending)
 
         scope.launch(Dispatchers.IO) {
+            // First validate the token
+            val validationResult = tokenValidator.validateToken(mint)
+            if (!validationResult.isValid) {
+                logger.warn("Token $mint failed validation: ${validationResult.reasons.joinToString(", ")}")
+                stateMap[mint]?.state = TokenState.SellFailed("Validation failed: ${validationResult.reasons.firstOrNull() ?: "Invalid token"}")
+                managementService?.incrementFailedTrades()
+                return@launch
+            }
+            
+            if (validationResult.riskScore > 0.7) {
+                logger.warn("Token $mint has high risk score: ${validationResult.riskScore}")
+                stateMap[mint]?.state = TokenState.SellFailed("High risk token: risk score ${validationResult.riskScore}")
+                managementService?.incrementFailedTrades()
+                return@launch
+            }
             runCatching {
                 // Attempt the Jupiter swap
                 jupiterSwapService.getQuoteAndPerformSwap(
@@ -202,18 +229,22 @@ class SolanaTokenSwapBot(
                     // keep the state as TradePending or set it to Swapped if you're confident
                     // Jito will handle it. Example:
                     stateMap[mint]?.state = TokenState.Swapped
+                    managementService?.incrementSuccessfulTrades()
                 } else {
                     val success = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                     if (success) {
                         stateMap[mint]?.state = TokenState.Swapped
+                        managementService?.incrementSuccessfulTrades()
                     } else {
                         stateMap[mint]?.state =
                             TokenState.SellFailed("Transaction failed for $mint")
+                        managementService?.incrementFailedTrades()
                     }
                 }
             }.onFailure { ex ->
                 logger.error("Swap error for $mint: ${ex.message}")
                 stateMap[mint]?.state = TokenState.SellFailed("Swap exception: ${ex.message}")
+                managementService?.incrementFailedTrades()
             }
         }
     }
@@ -252,17 +283,21 @@ class SolanaTokenSwapBot(
                     jitoBundlerService.enqueue(createSwapTransaction(swap.swapTransaction))
                     // same note: either keep it as Selling, or mark it Sold preemptively
                     stateMap[mint]?.state = TokenState.Sold
+                    managementService?.incrementSuccessfulTrades()
                 } else {
                     val sold = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                     if (sold) {
                         stateMap[mint]?.state = TokenState.Sold
+                        managementService?.incrementSuccessfulTrades()
                     } else {
                         stateMap[mint]?.state =
                             TokenState.SellFailed("Transaction failed for $mint")
+                        managementService?.incrementFailedTrades()
                     }
                 }
             }.onFailure {
                 stateMap[mint]?.state = TokenState.SellFailed("Swap error for $mint: ${it.message}")
+                managementService?.incrementFailedTrades()
             }
         }
     }

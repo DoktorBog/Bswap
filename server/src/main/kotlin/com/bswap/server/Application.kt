@@ -7,6 +7,8 @@ import com.bswap.server.routes.apiRoute
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
 import com.bswap.server.routes.walletRoutes
+import com.bswap.server.routes.botRoutes
+import com.bswap.server.service.BotManagementService
 import com.bswap.server.data.solana.jito.JitoBundlerService
 import com.bswap.server.data.solana.rpc.SolanaRpcClient
 import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
@@ -34,12 +36,10 @@ import kotlinx.serialization.json.Json
 
 fun main() {
     PumpFunService.connect()
-    val bot = SolanaTokenSwapBot()
-    bot.runDexScreenerSwap(
-        tokenBoostedProfiles = false,
-        coroutineScope = appScope
-    )
-    bot.observePumpFun(PumpFunService.observeEvents())
+    
+    // Initialize bot management service
+    val botManagementService = BotManagementService()
+    
     embeddedServer(Netty, port = SERVER_PORT) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
@@ -49,6 +49,7 @@ fun main() {
             tokensRoute(dexScreenerRepository.tokenProfilesFlow)
             apiRoute(dexScreenerRepository.tokenProfilesFlow)
             walletRoutes(walletService)
+            botRoutes(botManagementService)
         }
     }.start(wait = true)
 }

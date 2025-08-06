@@ -1,33 +1,25 @@
 package com.bswap.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Wallet
-import androidx.compose.material3.*
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -35,22 +27,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import com.bswap.app.Strings
-import org.koin.compose.koinViewModel
-import org.koin.core.parameter.parametersOf
-import androidx.lifecycle.viewModelScope
 import com.bswap.app.api.WalletApi
-import com.bswap.ui.TrianglesBackground
-import com.bswap.ui.account.AccountHeader
-import com.bswap.ui.token.TokenChip
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -93,7 +82,7 @@ class HomeViewModel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit, onBotControl: () -> Unit = {}, modifier: Modifier = Modifier) {
     val vm: HomeViewModel = koinViewModel(parameters = { parametersOf(publicKey) })
     val state by vm.uiState.collectAsState()
 
@@ -110,6 +99,9 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit,
                 IconButton(onClick = onSettings) {
                     Icon(Icons.Default.Menu, contentDescription = null, tint = Color.White)
                 }
+                IconButton(onClick = onBotControl) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Bot Control", tint = Color.White)
+                }
                 IconButton(onClick = onHistory) {
                     Icon(Icons.Default.History, contentDescription = Strings.history, tint = Color.White)
                 }
@@ -120,16 +112,28 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit,
                 NavigationBarItem(
                     selected = true,
                     onClick = {},
-                    icon = { Icon(Icons.Default.List, contentDescription = Strings.activity) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = Strings.activity) },
                     label = { Text(Strings.activity) },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color.White, unselectedIconColor = Color.White, unselectedTextColor = Color.White, indicatorColor = Color.Transparent)
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color.White,
+                        selectedTextColor = Color.White,
+                        unselectedIconColor = Color.White,
+                        unselectedTextColor = Color.White,
+                        indicatorColor = Color.Transparent
+                    )
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = {},
                     icon = { Icon(Icons.Default.Wallet, contentDescription = Strings.wallet) },
                     label = { Text(Strings.wallet) },
-                    colors = NavigationBarItemDefaults.colors(selectedIconColor = Color(0xFFADADAD), selectedTextColor = Color(0xFFADADAD), unselectedIconColor = Color(0xFFADADAD), unselectedTextColor = Color(0xFFADADAD), indicatorColor = Color.Transparent)
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFADADAD),
+                        selectedTextColor = Color(0xFFADADAD),
+                        unselectedIconColor = Color(0xFFADADAD),
+                        unselectedTextColor = Color(0xFFADADAD),
+                        indicatorColor = Color.Transparent
+                    )
                 )
             }
         },
