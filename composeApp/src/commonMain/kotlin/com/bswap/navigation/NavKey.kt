@@ -12,4 +12,5 @@ sealed interface NavKey {
     @Serializable object BotWallet : NavKey
     @Serializable object BotHistory : NavKey
     @Serializable object BotAlerts : NavKey
+    @Serializable data class WalletTransactionHistory(val publicKey: String) : NavKey
 }

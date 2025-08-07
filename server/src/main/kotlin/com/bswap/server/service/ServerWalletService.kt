@@ -159,7 +159,7 @@ class ServerWalletService(
         }
     }
 
-    suspend fun getWalletHistory(request: WalletHistoryRequest): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
+    suspend fun getWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
         try {
             if (!wallets.containsKey(request.publicKey)) {
                 return@withContext ApiResponse<WalletHistoryResponse>(

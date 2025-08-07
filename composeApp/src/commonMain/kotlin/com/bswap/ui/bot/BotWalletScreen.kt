@@ -27,6 +27,7 @@ data class TokenBalance(
 @Composable
 fun BotWalletScreen(
     onBack: () -> Unit,
+    onNavigateToTransactionHistory: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Mock data
@@ -146,9 +147,12 @@ fun BotWalletScreen(
                                 onClick = { /* TODO */ }
                             )
                             QuickActionButton(
-                                icon = Icons.Default.Refresh,
-                                label = "Refresh",
-                                onClick = { /* TODO */ }
+                                icon = Icons.Default.History,
+                                label = "History",
+                                onClick = { 
+                                    // Mock wallet address for demo
+                                    onNavigateToTransactionHistory?.invoke("7BgBvyjrZX8YKXAzN2wVbD8YkMXZJ4k9Fz8NyZ7VkT32") 
+                                }
                             )
                         }
                     }

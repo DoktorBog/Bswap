@@ -2,6 +2,7 @@ package com.bswap.server.routes
 
 import com.bswap.server.models.*
 import com.bswap.server.service.ServerWalletService
+import com.bswap.shared.model.WalletHistoryRequest
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -98,8 +99,20 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
                 
                 val response = walletService.getWalletHistory(request)
                 
-                if (response.success) {
-                    call.respond(HttpStatusCode.OK, response)
+                if (response.success && response.data != null) {
+                    // Convert server response to client expected format
+                    val historyPage = com.bswap.shared.model.HistoryPage(
+                        transactions = response.data.transactions.map { tx ->
+                            com.bswap.shared.model.SolanaTx(
+                                signature = tx.signature,
+                                address = tx.publicKey,
+                                amount = tx.amount,
+                                incoming = tx.type == TransactionType.RECEIVE || tx.type == TransactionType.BUY
+                            )
+                        },
+                        nextCursor = if (response.data.hasMore) "next_page" else null
+                    )
+                    call.respond(HttpStatusCode.OK, historyPage)
                 } else {
                     call.respond(HttpStatusCode.NotFound, response)
                 }

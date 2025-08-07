@@ -48,3 +48,10 @@ data class SwapTx(
 data class ApiError(
     val message: String,
 )
+
+@Serializable
+data class WalletHistoryRequest(
+    val publicKey: String,
+    val limit: Int = 50,
+    val offset: Int = 0
+)

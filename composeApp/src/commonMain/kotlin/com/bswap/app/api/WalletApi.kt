@@ -30,11 +30,13 @@ class WalletApi(private val client: HttpClient) {
         limit: Int = 10,
         cursor: String? = null,
     ): HistoryPage =
-        client.get("$baseUrl/wallet/$address/history") {
-            url {
-                parameters.append("limit", limit.toString())
-                cursor?.let { parameters.append("cursor", it) }
-            }
+        client.post("$baseUrl/wallet/history") {
+            contentType(ContentType.Application.Json)
+            setBody(WalletHistoryRequest(
+                publicKey = address,
+                limit = limit,
+                offset = 0
+            ))
         }.body()
 
     suspend fun swap(request: SwapRequest): SwapTx =

@@ -10,6 +10,7 @@ import com.bswap.ui.bot.BotAnalyticsScreen
 import com.bswap.ui.bot.BotWalletScreen
 import com.bswap.ui.bot.BotHistoryScreen
 import com.bswap.ui.bot.BotAlertsScreen
+import com.bswap.ui.history.TransactionHistoryScreen
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 
@@ -32,12 +33,19 @@ fun BswapNavHost(backStack: SnapshotStateList<NavKey>) {
                 onBack = { backStack.pop() }
             )
             NavKey.BotWallet -> BotWalletScreen(
-                onBack = { backStack.pop() }
+                onBack = { backStack.pop() },
+                onNavigateToTransactionHistory = { publicKey -> 
+                    backStack.push(NavKey.WalletTransactionHistory(publicKey))
+                }
             )
             NavKey.BotHistory -> BotHistoryScreen(
                 onBack = { backStack.pop() }
             )
             NavKey.BotAlerts -> BotAlertsScreen(
+                onBack = { backStack.pop() }
+            )
+            is NavKey.WalletTransactionHistory -> TransactionHistoryScreen(
+                publicKey = key.publicKey,
                 onBack = { backStack.pop() }
             )
         }
