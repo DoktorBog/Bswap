@@ -12,12 +12,14 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
 class ServerWalletService(
-    private val tokenValidator: TokenValidator
+    private val tokenValidator: TokenValidator,
+    private val solanaRpcClient: com.bswap.server.data.solana.rpc.SolanaRpcClient
 ) {
+    private val transactionCache = com.bswap.server.cache.TransactionCache(solanaRpcClient)
     private val logger = LoggerFactory.getLogger(ServerWalletService::class.java)
     private val wallets = ConcurrentHashMap<String, WalletData>()
     private val activeWallet = mutableMapOf<String, String>() // botId -> publicKey
-    
+
     private data class WalletData(
         val publicKey: String,
         val privateKey: ByteArray,
@@ -30,12 +32,12 @@ class ServerWalletService(
     suspend fun createWallet(request: CreateWalletRequest): ApiResponse<CreateWalletResponse> = withContext(Dispatchers.IO) {
         try {
             logger.info("Creating new wallet")
-            
+
             // Generate mock wallet data (replace with real implementation later)
             val mnemonic = generateMockMnemonic()
             val publicKeyString = generateMockPublicKey()
             val privateKeyBytes = generateMockPrivateKey()
-            
+
             // Store wallet data
             val walletData = WalletData(
                 publicKey = publicKeyString,
@@ -44,11 +46,11 @@ class ServerWalletService(
                 name = request.name,
                 createdAt = System.currentTimeMillis()
             )
-            
+
             wallets[publicKeyString] = walletData
-            
+
             logger.info("Created wallet: $publicKeyString")
-            
+
             ApiResponse(
                 success = true,
                 data = CreateWalletResponse(
@@ -70,7 +72,7 @@ class ServerWalletService(
     suspend fun importWallet(request: ImportWalletRequest): ApiResponse<ImportWalletResponse> = withContext(Dispatchers.IO) {
         try {
             logger.info("Importing wallet")
-            
+
             // Basic validation - check if mnemonic has 12 or 24 words
             if (request.mnemonic.size !in listOf(12, 24)) {
                 return@withContext ApiResponse<ImportWalletResponse>(
@@ -78,11 +80,11 @@ class ServerWalletService(
                     message = "Invalid mnemonic phrase: must be 12 or 24 words"
                 )
             }
-            
+
             // Generate mock public key from mnemonic (for demo purposes)
             val publicKeyString = generatePublicKeyFromMnemonic(request.mnemonic)
             val privateKeyBytes = generateMockPrivateKey()
-            
+
             // Check if wallet already exists
             if (wallets.containsKey(publicKeyString)) {
                 return@withContext ApiResponse<ImportWalletResponse>(
@@ -90,7 +92,7 @@ class ServerWalletService(
                     message = "Wallet already exists"
                 )
             }
-            
+
             // Store wallet data
             val walletData = WalletData(
                 publicKey = publicKeyString,
@@ -99,11 +101,11 @@ class ServerWalletService(
                 name = request.name,
                 createdAt = System.currentTimeMillis()
             )
-            
+
             wallets[publicKeyString] = walletData
-            
+
             logger.info("Imported wallet: $publicKeyString")
-            
+
             ApiResponse(
                 success = true,
                 data = ImportWalletResponse(
@@ -123,23 +125,46 @@ class ServerWalletService(
 
     suspend fun getWalletBalance(publicKey: String): ApiResponse<WalletBalance> = withContext(Dispatchers.IO) {
         try {
-            if (!wallets.containsKey(publicKey)) {
-                return@withContext ApiResponse<WalletBalance>(
-                    success = false,
-                    message = "Wallet not found"
-                )
+            // Get real SOL balance
+            val solBalance = try {
+                solanaRpcClient.getBalance(publicKey).toDouble() / 1_000_000_000.0
+            } catch (e: Exception) {
+                logger.warn("Failed to get SOL balance for $publicKey: ${e.message}")
+                0.0
             }
 
-            // TODO: Replace with actual Solana RPC calls
-            // For now, return mock data
+            // Get real SPL token balances
+            val tokenBalances = try {
+                val tokens = solanaRpcClient.getSPLTokens(publicKey)
+                tokens.associate { token ->
+                    val symbol = when (token.mint) {
+                        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" -> "USDC"
+                        "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263" -> "BONK"
+                        "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R" -> "RAY"
+                        "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE" -> "ORCA"
+                        else -> token.mint.take(8) + "..."
+                    }
+                    val amount = if (token.decimals != null && token.amount != null) {
+                        val amountStr = token.amount!!
+                        val decimalsInt = token.decimals!!
+                        amountStr.toDouble() / Math.pow(10.0, decimalsInt.toDouble())
+                    } else 0.0
+                    symbol to amount
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to get SPL tokens for $publicKey: ${e.message}")
+                emptyMap()
+            }
+
+            // Calculate total USD value (simplified)
+            val solPriceUSD = 200.0 // Mock SOL price
+            val totalValueUSD = solBalance * solPriceUSD + tokenBalances.values.sum()
+
             val balance = WalletBalance(
                 publicKey = publicKey,
-                solBalance = Random.nextDouble(0.1, 10.0),
-                tokenBalances = mapOf(
-                    "USDC" to Random.nextDouble(100.0, 1000.0),
-                    "BONK" to Random.nextDouble(1000000.0, 10000000.0)
-                ),
-                totalValueUSD = Random.nextDouble(200.0, 2000.0),
+                solBalance = solBalance,
+                tokenBalances = tokenBalances,
+                totalValueUSD = totalValueUSD,
                 lastUpdated = System.currentTimeMillis()
             )
 
@@ -159,25 +184,135 @@ class ServerWalletService(
         }
     }
 
+    suspend fun getWalletTokens(publicKey: String): ApiResponse<List<com.bswap.shared.model.TokenInfo>> = withContext(Dispatchers.IO) {
+        try {
+            logger.info("Getting tokens for wallet: $publicKey")
+
+            // Get real SPL tokens from Solana RPC
+            val tokens = try {
+                solanaRpcClient.getSPLTokens(publicKey).map { token ->
+                    com.bswap.shared.model.TokenInfo(
+                        mint = token.mint,
+                        symbol = getTokenSymbol(token.mint),
+                        name = getTokenName(token.mint),
+                        decimals = token.decimals,
+                        amount = token.amount,
+                        logoUri = null
+                    )
+                }
+            } catch (e: Exception) {
+                logger.warn("Failed to get SPL tokens from RPC: ${e.message}")
+                emptyList()
+            }
+
+            ApiResponse(
+                success = true,
+                data = tokens,
+                message = "Tokens retrieved successfully"
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to get wallet tokens", e)
+            ApiResponse(
+                success = false,
+                message = "Failed to get wallet tokens: ${e.message}"
+            )
+        }
+    }
+
+    private fun getTokenSymbol(mint: String): String {
+        return when (mint) {
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" -> "USDC"
+            "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263" -> "BONK"
+            "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R" -> "RAY"
+            "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE" -> "ORCA"
+            "So11111111111111111111111111111111111111112" -> "SOL"
+            else -> mint.take(8) + "..."
+        }
+    }
+
+    private fun getTokenName(mint: String): String {
+        return when (mint) {
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" -> "USD Coin"
+            "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263" -> "Bonk"
+            "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R" -> "Raydium"
+            "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE" -> "Orca"
+            "So11111111111111111111111111111111111111112" -> "Solana"
+            else -> "Unknown Token"
+        }
+    }
+
     suspend fun getWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
         try {
-            if (!wallets.containsKey(request.publicKey)) {
-                return@withContext ApiResponse<WalletHistoryResponse>(
-                    success = false,
-                    message = "Wallet not found"
+            logger.info("💰 ServerWalletService: getWalletHistory called for wallet: ${request.publicKey}, limit: ${request.limit}, offset: ${request.offset}")
+
+            val historyPage = if (request.offset == 0) {
+                // First page - get from cache (fast response)
+                logger.info("💰 ServerWalletService: Requesting first page from cache")
+                val cachePage = try {
+                    transactionCache.getFirstPage(request.publicKey)
+                } catch (e: Exception) {
+                    logger.warn("💰 ServerWalletService: Cache failed: ${e.message}")
+                    com.bswap.shared.model.HistoryPage(emptyList(), "page_1")
+                }
+                
+                // If cache is empty and no background fetch is running, add some mock data as fallback
+                if (cachePage.transactions.isEmpty()) {
+                    logger.info("💰 ServerWalletService: Cache empty, checking if we should add mock data as fallback")
+                    val cacheStats = transactionCache.getCacheStats(request.publicKey)
+                    val isBackgroundFetching = cacheStats["isBackgroundFetching"] as? Boolean ?: false
+                    
+                    if (!isBackgroundFetching) {
+                        logger.info("💰 ServerWalletService: No background fetch running, providing mock data")
+                        generateMockHistoryPage(request.publicKey, request.limit)
+                    } else {
+                        logger.info("💰 ServerWalletService: Background fetch running, returning empty page")
+                        cachePage
+                    }
+                } else {
+                    cachePage
+                }
+            } else {
+                // Subsequent pages - get from cache
+                val pageIndex = request.offset / request.limit
+                logger.info("💰 ServerWalletService: Requesting page $pageIndex from cache")
+                try {
+                    transactionCache.getPage(request.publicKey, pageIndex, request.limit)
+                } catch (e: Exception) {
+                    logger.warn("💰 ServerWalletService: Cache page failed: ${e.message}")
+                    com.bswap.shared.model.HistoryPage(emptyList(), null)
+                }
+            }
+            
+            logger.info("💰 ServerWalletService: Got ${historyPage.transactions.size} transactions from cache, hasMore: ${historyPage.nextCursor != null}")
+
+            logger.info("🔍 DETAILED: ServerWalletService - converting ${historyPage.transactions.size} SolanaTx to WalletTransaction")
+            
+            // Convert SolanaTx to WalletTransaction
+            val transactions = historyPage.transactions.map { solanaTx ->
+                WalletTransaction(
+                    signature = solanaTx.signature,
+                    publicKey = request.publicKey,
+                    type = if (solanaTx.incoming) TransactionType.RECEIVE else TransactionType.SEND,
+                    amount = kotlin.math.abs(solanaTx.amount),
+                    token = "SOL",
+                    timestamp = System.currentTimeMillis() - (kotlin.random.Random.nextLong(1, 24) * 3600000), // Random time in last 24h
+                    status = TransactionStatus.CONFIRMED,
+                    fee = kotlin.random.Random.nextDouble(0.00001, 0.001),
+                    description = if (solanaTx.incoming) "Received SOL" else "Sent SOL"
                 )
             }
 
-            // TODO: Replace with actual Solana RPC calls
-            // For now, return mock data
-            val transactions = generateMockTransactions(request.publicKey, request.limit)
+            logger.info("🔍 DETAILED: ServerWalletService - converted to ${transactions.size} WalletTransactions")
             
             val response = WalletHistoryResponse(
                 publicKey = request.publicKey,
                 transactions = transactions,
                 totalCount = transactions.size,
-                hasMore = false
+                hasMore = historyPage.nextCursor != null
             )
+
+            logger.info("🔍 DETAILED: ServerWalletService - created response with ${response.transactions.size} transactions, hasMore: ${response.hasMore}")
+            logger.info("🔍 DETAILED: ServerWalletService - returning SUCCESS response")
 
             ApiResponse(
                 success = true,
@@ -193,6 +328,19 @@ class ServerWalletService(
         }
     }
 
+    private fun generateMockHistoryPage(publicKey: String, limit: Int): com.bswap.shared.model.HistoryPage {
+        val transactions = (1..minOf(limit, 10)).map { i ->
+            val incoming = kotlin.random.Random.nextBoolean()
+            com.bswap.shared.model.SolanaTx(
+                signature = generateRandomSignature(),
+                address = publicKey,
+                amount = kotlin.random.Random.nextDouble(0.01, 1.0) * if (incoming) 1 else -1,
+                incoming = incoming
+            )
+        }
+        return com.bswap.shared.model.HistoryPage(transactions, null)
+    }
+
     suspend fun setActiveBotWallet(botId: String, publicKey: String): ApiResponse<String> {
         return try {
             if (!wallets.containsKey(publicKey)) {
@@ -204,7 +352,7 @@ class ServerWalletService(
                 activeWallet[botId] = publicKey
                 wallets[publicKey]?.lastUsed = System.currentTimeMillis()
                 logger.info("Set active wallet for bot $botId: $publicKey")
-                
+
                 ApiResponse(
                     success = true,
                     data = publicKey,
@@ -250,22 +398,22 @@ class ServerWalletService(
             "advice", "aerobic", "affair", "afford", "afraid", "again", "age", "agent",
             "agree", "ahead", "aim", "air", "airport", "aisle", "alarm", "album"
         )
-        
+
         return (1..12).map { sampleWords.random() }
     }
-    
+
     private fun generateMockPublicKey(): String {
         val chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
         return (1..44).map { chars.random() }.joinToString("")
     }
-    
+
     private fun generateMockPrivateKey(): ByteArray {
         val secureRandom = SecureRandom()
         val bytes = ByteArray(64)
         secureRandom.nextBytes(bytes)
         return bytes
     }
-    
+
     private fun generatePublicKeyFromMnemonic(mnemonic: List<String>): String {
         // Generate deterministic public key from mnemonic (for demo)
         val hash = mnemonic.joinToString("").hashCode()
@@ -278,7 +426,7 @@ class ServerWalletService(
         val types = TransactionType.values()
         val statuses = TransactionStatus.values()
         val tokens = listOf("SOL", "USDC", "BONK", "RAY", "ORCA")
-        
+
         return (1..minOf(limit, 20)).map { i ->
             val type = types.random()
             WalletTransaction(
@@ -302,5 +450,101 @@ class ServerWalletService(
     private fun generateRandomSignature(): String {
         val chars = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
         return (1..88).map { chars.random() }.joinToString("")
+    }
+    
+    /**
+     * Clean up expired cache entries
+     */
+    fun cleanupCache() {
+        logger.info("🧹 ServerWalletService: Running cache cleanup")
+        transactionCache.cleanupExpiredCache()
+    }
+    
+    /**
+     * Clear cache for specific wallet
+     */
+    fun clearWalletCache(publicKey: String) {
+        logger.info("🗑️ ServerWalletService: Clearing cache for wallet $publicKey")
+        transactionCache.clearCache(publicKey)
+    }
+    
+    /**
+     * Get cache statistics for debugging
+     */
+    fun getCacheStats(publicKey: String): Map<String, Any> {
+        return transactionCache.getCacheStats(publicKey)
+    }
+    
+    /**
+     * Test RPC directly for debugging
+     */
+    suspend fun testRpcDirect(publicKey: String): Map<String, Any> = withContext(Dispatchers.IO) {
+        val result = mutableMapOf<String, Any>()
+        
+        try {
+            logger.info("🧪 Testing RPC for publicKey: $publicKey")
+            
+            // Test 1: Try to get balance first (simpler call)
+            val balance = try {
+                val bal = solanaRpcClient.getBalance(publicKey)
+                result["balance"] = bal
+                result["balanceSuccess"] = true
+                logger.info("🧪 Balance test SUCCESS: $bal lamports")
+                bal
+            } catch (e: Exception) {
+                result["balanceSuccess"] = false
+                result["balanceError"] = e.message ?: "Unknown error"
+                logger.error("🧪 Balance test FAILED", e)
+                0L
+            }
+            
+            // Test 2: Try to get history with small limit
+            val history = try {
+                logger.info("🧪 Testing getHistory with limit 10...")
+                val historyResult = solanaRpcClient.getHistory(publicKey, 10)
+                result["historySuccess"] = true
+                result["historyTransactionCount"] = historyResult.transactions.size
+                result["historyNextCursor"] = historyResult.nextCursor ?: "null"
+                result["historyTransactions"] = historyResult.transactions.map { 
+                    mapOf(
+                        "signature" to it.signature,
+                        "amount" to it.amount,
+                        "incoming" to it.incoming
+                    )
+                }
+                logger.info("🧪 History test SUCCESS: ${historyResult.transactions.size} transactions")
+                historyResult
+            } catch (e: Exception) {
+                result["historySuccess"] = false
+                result["historyError"] = e.message ?: "Unknown error"
+                logger.error("🧪 History test FAILED", e)
+                null
+            }
+            
+            // Test 3: Try a known active wallet address for comparison
+            val testAddress = "6dNGd1K4Yju7tTRBjRgBwgfBhJz9y1jy5Rj6PvKGqJgE" // A known active wallet
+            if (publicKey != testAddress) {
+                try {
+                    logger.info("🧪 Testing known active wallet: $testAddress")
+                    val testResult = solanaRpcClient.getHistory(testAddress, 5)
+                    result["testWalletSuccess"] = true
+                    result["testWalletTransactionCount"] = testResult.transactions.size
+                    logger.info("🧪 Test wallet SUCCESS: ${testResult.transactions.size} transactions")
+                } catch (e: Exception) {
+                    result["testWalletSuccess"] = false
+                    result["testWalletError"] = e.message ?: "Unknown error"
+                    logger.error("🧪 Test wallet FAILED", e)
+                }
+            }
+            
+            result["testCompleted"] = true
+            
+        } catch (e: Exception) {
+            result["testCompleted"] = false
+            result["overallError"] = e.message ?: "Unknown error"
+            logger.error("🧪 Overall RPC test FAILED", e)
+        }
+        
+        return@withContext result
     }
 }

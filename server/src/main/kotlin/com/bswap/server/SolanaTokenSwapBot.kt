@@ -4,7 +4,6 @@ import com.bswap.server.data.dexscreener.models.TokenBoost
 import com.bswap.server.data.dexscreener.models.TokenProfile
 import com.bswap.server.data.solana.jito.JitoBundlerService
 import com.bswap.server.data.solana.pumpfun.TokenTradeResponse
-import com.bswap.server.data.solana.pumpfun.isTokenValid
 import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
 import com.bswap.server.data.solana.transaction.DefaultTransactionExecutor
 import com.bswap.server.data.solana.transaction.TokenInfo
@@ -15,6 +14,7 @@ import com.bswap.server.data.solana.transaction.executeSolTransaction
 import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.data.solana.transaction.getTokenAccountsByOwner
 import com.bswap.server.validation.TokenValidator
+import com.bswap.server.validation.ValidationConfig
 import foundation.metaplex.rpc.networking.NetworkDriver
 import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.coroutines.CoroutineScope
@@ -25,12 +25,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.sample
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 private val logger = LoggerFactory.getLogger("SolanaTokenSwapBot")
 
@@ -83,7 +82,7 @@ class SolanaTokenSwapBot(
     ),
 
     private val managementService: com.bswap.server.service.BotManagementService? = null,
-    private val tokenValidator: TokenValidator = TokenValidator(client)
+    private val tokenValidator: TokenValidator = TokenValidator(client, ValidationConfig())
 ) {
     private var processingTokens = AtomicInteger(0)
     private val stateMap = ConcurrentHashMap<String, TokenStatus>()
@@ -157,7 +156,7 @@ class SolanaTokenSwapBot(
     /** Observe PumpFun stream (TokenTradeResponse). */
     fun observePumpFun(flow: Flow<TokenTradeResponse>) = scope.launch {
         flow.debounce(2000).collect {
-            if (isNew(it.mint) && isTokenValid(it.mint)) {
+            if (isNew(it.mint)) {
                 setLastSell(it.mint)
                 trade(it.mint)
             }
@@ -186,7 +185,6 @@ class SolanaTokenSwapBot(
      * If it fails or no route, remove from map or mark as SellFailed.
      */
     private fun trade(mint: String) {
-        logger.info("Trade mint = $mint")
         processingTokens.incrementAndGet()
 
         // Mark as pending initially
@@ -196,14 +194,13 @@ class SolanaTokenSwapBot(
             // First validate the token
             val validationResult = tokenValidator.validateToken(mint)
             if (!validationResult.isValid) {
-                logger.warn("Token $mint failed validation: ${validationResult.reasons.joinToString(", ")}")
-                stateMap[mint]?.state = TokenState.SellFailed("Validation failed: ${validationResult.reasons.firstOrNull() ?: "Invalid token"}")
+                stateMap[mint]?.state =
+                    TokenState.SellFailed("Validation failed: ${validationResult.reasons.firstOrNull() ?: "Invalid token"}")
                 managementService?.incrementFailedTrades()
                 return@launch
             }
 
             if (validationResult.riskScore > 0.7) {
-                logger.warn("Token $mint has high risk score: ${validationResult.riskScore}")
                 stateMap[mint]?.state = TokenState.SellFailed("High risk token: risk score ${validationResult.riskScore}")
                 managementService?.incrementFailedTrades()
                 return@launch

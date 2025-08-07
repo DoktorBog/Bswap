@@ -66,7 +66,7 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
             }
         }
         
-        // Get wallet balance
+        // Get wallet balance - новый эндпоинт
         get("/balance/{publicKey}") {
             try {
                 val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
@@ -90,16 +90,44 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
                 )
             }
         }
+
+        // Get wallet tokens - новый эндпоинт
+        get("/tokens/{publicKey}") {
+            try {
+                val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
+                logger.info("Getting tokens for wallet: $publicKey")
+                
+                val response = walletService.getWalletTokens(publicKey)
+                
+                if (response.success) {
+                    call.respond(HttpStatusCode.OK, response)
+                } else {
+                    call.respond(HttpStatusCode.NotFound, response)
+                }
+            } catch (e: Exception) {
+                logger.error("Error getting wallet tokens", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ApiResponse<List<com.bswap.shared.model.TokenInfo>>(
+                        success = false,
+                        message = "Internal server error: ${e.message}"
+                    )
+                )
+            }
+        }
         
         // Get transaction history
         post("/history") {
             try {
                 val request = call.receive<WalletHistoryRequest>()
-                logger.info("Getting history for wallet: ${request.publicKey}")
+                logger.info("🔍 DETAILED: WalletRoutes - received history request for wallet: ${request.publicKey}, limit: ${request.limit}")
                 
                 val response = walletService.getWalletHistory(request)
+                logger.info("🔍 DETAILED: WalletRoutes - service returned success: ${response.success}, data: ${response.data != null}")
                 
                 if (response.success && response.data != null) {
+                    logger.info("🔍 DETAILED: WalletRoutes - service data has ${response.data.transactions.size} transactions")
+                    
                     // Convert server response to client expected format
                     val historyPage = com.bswap.shared.model.HistoryPage(
                         transactions = response.data.transactions.map { tx ->
@@ -112,8 +140,13 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
                         },
                         nextCursor = if (response.data.hasMore) "next_page" else null
                     )
+                    
+                    logger.info("🔍 DETAILED: WalletRoutes - converted to HistoryPage with ${historyPage.transactions.size} transactions")
+                    logger.info("🔍 DETAILED: WalletRoutes - responding with OK status and ${historyPage.transactions.size} transactions")
+                    
                     call.respond(HttpStatusCode.OK, historyPage)
                 } else {
+                    logger.warn("🔍 DETAILED: WalletRoutes - service failed or no data, success: ${response.success}, message: ${response.message}")
                     call.respond(HttpStatusCode.NotFound, response)
                 }
             } catch (e: Exception) {
@@ -213,6 +246,90 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     ApiResponse<Map<String, String>>(
+                        success = false,
+                        message = "Internal server error: ${e.message}"
+                    )
+                )
+            }
+        }
+        
+        // Debug endpoint - get cache stats
+        get("/cache-stats/{publicKey}") {
+            try {
+                val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
+                logger.info("Getting cache stats for wallet: $publicKey")
+                
+                val stats = walletService.getCacheStats(publicKey)
+                
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse(
+                        success = true,
+                        data = stats,
+                        message = "Cache stats retrieved successfully"
+                    )
+                )
+            } catch (e: Exception) {
+                logger.error("Error getting cache stats", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ApiResponse<Map<String, Any>>(
+                        success = false,
+                        message = "Internal server error: ${e.message}"
+                    )
+                )
+            }
+        }
+        
+        // Debug endpoint - clear cache
+        post("/clear-cache/{publicKey}") {
+            try {
+                val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
+                logger.info("Clearing cache for wallet: $publicKey")
+                
+                walletService.clearWalletCache(publicKey)
+                
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse(
+                        success = true,
+                        data = "Cache cleared",
+                        message = "Cache cleared successfully for wallet"
+                    )
+                )
+            } catch (e: Exception) {
+                logger.error("Error clearing cache", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ApiResponse<String>(
+                        success = false,
+                        message = "Internal server error: ${e.message}"
+                    )
+                )
+            }
+        }
+        
+        // Debug endpoint - test RPC directly
+        get("/test-rpc/{publicKey}") {
+            try {
+                val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
+                logger.info("Testing RPC directly for wallet: $publicKey")
+                
+                val result = walletService.testRpcDirect(publicKey)
+                
+                call.respond(
+                    HttpStatusCode.OK,
+                    ApiResponse(
+                        success = true,
+                        data = result,
+                        message = "RPC test completed"
+                    )
+                )
+            } catch (e: Exception) {
+                logger.error("Error testing RPC", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    ApiResponse<Map<String, Any>>(
                         success = false,
                         message = "Internal server error: ${e.message}"
                     )

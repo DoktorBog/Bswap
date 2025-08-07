@@ -91,7 +91,6 @@ class JitoBundlerService(
                 val chunk = mutableListOf<String>()
                 mutex.withLock {
                     if (txQueue.isEmpty()) {
-                        logger.info("No more tx in queue. Stop flushing.")
                         return
                     }
                     repeat(batchSize) {

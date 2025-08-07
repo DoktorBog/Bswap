@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.bswap.app.models.BotWalletViewModel
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
 
 data class TokenBalance(
@@ -30,15 +32,29 @@ fun BotWalletScreen(
     onNavigateToTransactionHistory: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    // Mock data
-    val solBalance = Random.nextDouble(5.0, 50.0)
-    val totalUSDValue = Random.nextDouble(1000.0, 10000.0)
-    val tokenBalances = listOf(
-        TokenBalance("USDC", Random.nextDouble(100.0, 1000.0), Random.nextDouble(100.0, 1000.0), Random.nextDouble(-5.0, 15.0)),
-        TokenBalance("BONK", Random.nextDouble(1000000.0, 10000000.0), Random.nextDouble(50.0, 500.0), Random.nextDouble(-10.0, 25.0)),
-        TokenBalance("RAY", Random.nextDouble(10.0, 100.0), Random.nextDouble(200.0, 800.0), Random.nextDouble(-8.0, 20.0)),
-        TokenBalance("ORCA", Random.nextDouble(5.0, 50.0), Random.nextDouble(100.0, 400.0), Random.nextDouble(-12.0, 18.0))
-    )
+    val viewModel: BotWalletViewModel = koinViewModel()
+    val state by viewModel.state.collectAsState()
+    
+    // Real data from API
+    val solBalance = state.balance?.solBalance ?: 0.0
+    val totalUSDValue = state.balance?.totalValueUSD ?: 0.0
+    
+    // Convert tokens and balance data to UI format
+    val tokenBalances = state.tokens.map { token ->
+        val balance = token.amount?.toDoubleOrNull() ?: 0.0
+        val adjustedBalance = if (token.decimals != null && token.decimals!! > 0) {
+            balance / Math.pow(10.0, token.decimals!!.toDouble())
+        } else balance
+        
+        val usdValue = state.balance?.tokenBalances?.get(token.symbol ?: token.mint.take(8)) ?: 0.0
+        
+        TokenBalance(
+            symbol = token.symbol ?: token.mint.take(8) + "...",
+            balance = adjustedBalance,
+            usdValue = usdValue,
+            change24h = Random.nextDouble(-10.0, 15.0) // TODO: Get real 24h change data
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -52,6 +68,18 @@ fun BotWalletScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (state.isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).padding(end = 8.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { viewModel.refresh() }
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -68,6 +96,50 @@ fun BotWalletScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
+            // Loading state
+            if (state.isLoading && state.balance == null) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+            
+            // Error state
+            if (state.error != null) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Error loading wallet data",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = state.error!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Button(
+                                onClick = { 
+                                    viewModel.clearError()
+                                    viewModel.refresh() 
+                                },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+            }
+            
             item {
                 // Wallet Overview
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -150,8 +222,8 @@ fun BotWalletScreen(
                                 icon = Icons.Default.History,
                                 label = "History",
                                 onClick = { 
-                                    // Mock wallet address for demo
-                                    onNavigateToTransactionHistory?.invoke("7BgBvyjrZX8YKXAzN2wVbD8YkMXZJ4k9Fz8NyZ7VkT32") 
+                                    // Real bot wallet public key
+                                    onNavigateToTransactionHistory?.invoke("F277zfVkW6VBfkfWPNVXKoBEgCCeVcFYdiZDUX9yCPDW") 
                                 }
                             )
                         }

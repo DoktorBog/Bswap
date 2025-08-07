@@ -100,8 +100,9 @@ fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Mo
                             TransactionRow(tx = tx)
                         }
                         
-                        if (isLoading) {
-                            item {
+                        // Load More button
+                        item {
+                            if (isLoading) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -109,6 +110,20 @@ fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Mo
                                     contentAlignment = Alignment.Center
                                 ) {
                                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Button(
+                                        onClick = { vm.loadMore() },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Загрузить еще")
+                                    }
                                 }
                             }
                         }

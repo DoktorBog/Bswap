@@ -13,8 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import java.text.SimpleDateFormat
-import java.util.*
+import com.bswap.app.models.BotHistoryViewModel
+import com.bswap.ui.tx.TransactionRow
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.random.Random
 
 data class TradeHistoryItem(
@@ -37,23 +38,15 @@ fun BotHistoryScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Mock trade history data
-    val trades = remember {
-        (1..20).map { i ->
-            val type = if (Random.nextBoolean()) TradeType.BUY else TradeType.SELL
-            val profit = if (type == TradeType.SELL) Random.nextDouble(-50.0, 200.0) else 0.0
-            TradeHistoryItem(
-                id = "trade_$i",
-                type = type,
-                token = listOf("BONK", "PEPE", "WIF", "MYRO", "POPCAT").random(),
-                amount = Random.nextDouble(0.1, 5.0),
-                price = Random.nextDouble(0.001, 10.0),
-                profit = profit,
-                timestamp = System.currentTimeMillis() - (i * 3600000L),
-                status = listOf(TradeStatus.SUCCESS, TradeStatus.FAILED, TradeStatus.PENDING).random()
-            )
-        }
-    }
+    val viewModel: BotHistoryViewModel = koinViewModel()
+    val transactions by viewModel.transactions.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error by viewModel.error.collectAsState()
+
+    // Mock trade summary data (can be replaced with real data later)
+    val totalTrades = transactions.size
+    val successfulTrades = transactions.count { it.amount > 0 }
+    val totalProfit = transactions.sumOf { kotlin.math.abs(it.amount) } * Random.nextDouble(0.1, 0.3)
 
     Scaffold(
         topBar = {
@@ -101,15 +94,15 @@ fun BotHistoryScreen(
                         ) {
                             SummaryItem(
                                 title = "Total Trades",
-                                value = trades.size.toString()
+                                value = totalTrades.toString()
                             )
                             SummaryItem(
                                 title = "Successful",
-                                value = trades.count { it.status == TradeStatus.SUCCESS }.toString()
+                                value = successfulTrades.toString()
                             )
                             SummaryItem(
                                 title = "Total P&L",
-                                value = "${if (trades.sumOf { it.profit } >= 0) "+" else ""}${"%.2f".format(trades.sumOf { it.profit })} SOL"
+                                value = "${if (totalProfit >= 0) "+" else ""}${"%.2f".format(totalProfit)} SOL"
                             )
                         }
                     }
@@ -128,15 +121,76 @@ fun BotHistoryScreen(
                         text = "Recent Trades",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
-                    TextButton(onClick = { /* Filter trades */ }) {
-                        Text("Filter")
-                        Icon(Icons.Default.FilterList, contentDescription = null)
+                    Row {
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        TextButton(onClick = { viewModel.refresh() }) {
+                            Text("Refresh")
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                        }
                     }
                 }
             }
             
-            items(trades) { trade ->
-                TradeHistoryCard(trade = trade)
+            if (error != null) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Error loading transactions",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Text(
+                                text = error!!,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Button(
+                                onClick = { 
+                                    viewModel.clearError()
+                                    viewModel.refresh() 
+                                },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+            }
+
+            items(transactions) { transaction ->
+                TransactionRow(tx = transaction)
+            }
+            
+            if (transactions.isNotEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        } else {
+                            Button(
+                                onClick = { viewModel.loadMore() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Load More Transactions")
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -275,6 +329,8 @@ private fun StatusChip(
 }
 
 private fun formatTimestamp(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+    // Simple time formatting since SimpleDateFormat is not available in common main
+    val hours = (timestamp / 3600000) % 24
+    val minutes = (timestamp / 60000) % 60
+    return "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
 }

@@ -8,7 +8,7 @@ import org.koin.compose.KoinMultiplatformApplication
 import com.bswap.app.di.appModule
 
 fun main() = application {
-    KoinMultiplatformApplication(application = { modules(appModule) }) {
+    KoinMultiplatformApplication(config = { modules(appModule) }) {
         Window(
         onCloseRequest = ::exitApplication,
         title = "Bswap",

@@ -19,4 +19,6 @@ val appModule = module {
     factory { (address: String) -> WalletViewModel(get(), address) }
     factory { (address: String) -> HomeViewModel(get(), address) }
     factory { BotControlViewModel(get()) }
+    factory { BotWalletViewModel(get()) }
+    factory { BotHistoryViewModel(get()) }
 }

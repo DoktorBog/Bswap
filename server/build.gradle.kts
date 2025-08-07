@@ -41,4 +41,6 @@ dependencies {
     implementation(libs.metaplex.solana.rpc)
 
     implementation(project(":shared"))
+
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")   // актуальная на август 2025
 }

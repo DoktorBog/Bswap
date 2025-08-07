@@ -34,7 +34,8 @@ class WalletViewModel(
         runCatching { api.walletInfo(address) }
             .onSuccess { _walletInfo.value = it }
             .onFailure { it.printStackTrace() }
-        runCatching { api.getHistory(address) }
+        // Start with smaller batch - only load 50 transactions initially
+        runCatching { api.getHistory(address, limit = 50) }
             .onSuccess {
                 _history.value = it.transactions
                 cursor = it.nextCursor
@@ -44,12 +45,15 @@ class WalletViewModel(
     }
 
     fun loadMore() = viewModelScope.launch {
-        if (cursor == null) return@launch
-        runCatching { api.getHistory(address, cursor = cursor) }
+        if (cursor == null || _isLoading.value) return@launch
+        _isLoading.value = true
+        // Load next page with smaller batch size (50 instead of 100)  
+        runCatching { api.getHistory(address, limit = 50, cursor = cursor) }
             .onSuccess {
                 _history.value = _history.value + it.transactions
                 cursor = it.nextCursor
             }
             .onFailure { it.printStackTrace() }
+        _isLoading.value = false
     }
 }

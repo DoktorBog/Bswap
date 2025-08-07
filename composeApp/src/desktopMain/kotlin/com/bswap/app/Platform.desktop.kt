@@ -2,6 +2,7 @@ package com.bswap.app
 
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -17,6 +18,12 @@ actual fun networkClient(): HttpClient {
                 ignoreUnknownKeys = true
                 prettyPrint = true
             })
+        }
+        
+        install(HttpTimeout) {
+            requestTimeoutMillis = 60_000 // 60 seconds for wallet history requests
+            connectTimeoutMillis = 30_000 // 30 seconds to connect
+            socketTimeoutMillis = 60_000  // 60 seconds for socket operations
         }
     }
 }

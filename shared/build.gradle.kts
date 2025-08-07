@@ -10,14 +10,15 @@ kotlin {
     androidTarget()
     jvm()
     if (enableWasm) {
-        wasmJs()
+        wasmJs {
+            browser()
+        }
     }
 
     sourceSets {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.sol4k)
             }
         }
         val jvmMain by getting {
@@ -28,10 +29,15 @@ kotlin {
         val androidMain by getting {
             dependencies {
                 implementation(libs.wallet.core)
+                implementation(libs.sol4k)
             }
         }
         if (enableWasm) {
-            val wasmJsMain by getting
+            val wasmJsMain by getting {
+                dependencies {
+                    // WASM doesn't support sol4k yet
+                }
+            }
         }
     }
 }

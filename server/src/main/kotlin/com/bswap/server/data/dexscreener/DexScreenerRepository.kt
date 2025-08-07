@@ -81,13 +81,12 @@ class DexScreenerRepository(
     private var pairsJob: Job? = null
     private var pairsByTokenJob: Job? = null
     private var searchPairsJob: Job? = null
-    
+
     private suspend fun refreshTokenProfiles() {
         rateLimiter.acquire(RateLimitCategory.Standard)
         try {
             val data = client.getTokenProfiles()
             _tokenProfilesFlow.value = data
-            logger.info("Fetched ${data.size} token profiles")
         } catch (e: Exception) {
             logger.error("Failed to refresh token profiles: ${e.message}", e)
         }
@@ -98,7 +97,6 @@ class DexScreenerRepository(
         try {
             val data = client.getLatestBoostedTokens()
             _latestBoostedTokensFlow.value = data
-            logger.info("Fetched ${data.size} latest boosted tokens")
         } catch (e: Exception) {
             logger.error("Failed to refresh latest boosted tokens: ${e.message}", e)
         }
@@ -109,7 +107,6 @@ class DexScreenerRepository(
         try {
             val data = client.getTopBoostedTokens()
             _topBoostedTokensFlow.value = data
-            logger.info("Fetched ${data.size} top boosted tokens")
         } catch (e: Exception) {
             logger.error("Failed to refresh top boosted tokens: ${e.message}", e)
         }
@@ -120,7 +117,6 @@ class DexScreenerRepository(
         try {
             val data = client.getOrders(chainId, tokenAddress)
             _ordersFlow.value = data
-            logger.info("Fetched ${data.size} orders for $tokenAddress on $chainId")
         } catch (e: Exception) {
             logger.error("Failed to refresh orders: ${e.message}", e)
         }
@@ -131,7 +127,6 @@ class DexScreenerRepository(
         try {
             val data = client.getPairsByChainAndPair(chainId, pairId)
             _pairsFlow.value = data
-            logger.info("Fetched pairs for chainId=$chainId, pairId=$pairId")
         } catch (e: Exception) {
             logger.error("Failed to refresh pairs by chain and pair: ${e.message}", e)
         }
@@ -142,7 +137,6 @@ class DexScreenerRepository(
         try {
             val data = client.getPairsByToken(tokenAddresses)
             _pairsByTokenFlow.value = data
-            logger.info("Fetched pairs for tokens=$tokenAddresses")
         } catch (e: Exception) {
             logger.error("Failed to refresh pairs by token: ${e.message}", e)
         }
@@ -153,7 +147,6 @@ class DexScreenerRepository(
         try {
             val data = client.searchPairs(query)
             _searchPairsFlow.value = data
-            logger.info("Searched pairs with query=$query, found ${data.pairs?.size ?: 0}")
         } catch (e: Exception) {
             logger.error("Failed to search pairs: ${e.message}", e)
         }

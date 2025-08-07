@@ -44,7 +44,6 @@ kotlin {
         } else null
         
         androidMain.dependencies {
-            implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.kotlinx.serialization.json)
@@ -53,6 +52,7 @@ kotlin {
                 exclude(group = "com.google.protobuf", module = "protobuf-javalite")
             }
             implementation(libs.wallet.core)
+            implementation(project(":shared"))
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -61,7 +61,6 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
-            implementation(compose.preview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtime.compose)
@@ -78,7 +77,10 @@ kotlin {
             implementation(libs.coil.mp)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
-            implementation(project(":shared"))
+        }
+        
+        androidMain.dependencies {
+            implementation(compose.preview)
         }
         wasmJsMain?.dependencies {
             implementation(libs.ktor.client.js)
@@ -87,9 +89,11 @@ kotlin {
 
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
+            implementation(compose.preview)
             implementation(libs.kotlinx.coroutines.swing)
             implementation(libs.ktor.client.cio)
             implementation(libs.kotlinx.serialization.json)
+            implementation(project(":shared"))
         }
     }
 }
