@@ -29,3 +29,4 @@ node_modules/
 kotlin-js-store/
 
 /.kotlin/
+/.kotlin/metadata/kotlinTransformedMetadataLibraries/
