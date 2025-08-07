@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
+import com.bswap.ui.Preview
 
 @Composable
 fun UiCard(

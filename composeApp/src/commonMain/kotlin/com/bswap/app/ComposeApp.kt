@@ -8,7 +8,6 @@ import com.bswap.navigation.NavKey
 import com.bswap.navigation.rememberBackStack
 import com.bswap.navigation.replaceAll
 import com.bswap.ui.WalletTheme
-import androidx.compose.ui.tooling.preview.Preview
 import com.bswap.data.seedStorage
 import com.bswap.app.di.appModule
 import org.koin.compose.KoinApplication
@@ -37,11 +36,3 @@ fun BswapApp(backStack: SnapshotStateList<NavKey> = rememberBackStack()) {
     }
 }
 
-/** Preview of [ComposeApp]. */
-@Preview
-@Composable
-private fun ComposeAppPreview() {
-    KoinApplicationPreview(application = { modules(appModule) }) {
-        ComposeApp()
-    }
-}

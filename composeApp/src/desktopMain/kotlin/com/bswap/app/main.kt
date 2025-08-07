@@ -5,13 +5,15 @@ import androidx.compose.ui.window.application
 import com.bswap.app.BswapApp
 import com.bswap.navigation.rememberBackStack
 import org.koin.compose.KoinMultiplatformApplication
+import org.koin.core.context.startKoin
 import com.bswap.app.di.appModule
 
 fun main() = application {
-    KoinMultiplatformApplication(config = { modules(appModule) }) {
+    KoinMultiplatformApplication { 
+        startKoin { modules(appModule) } 
         Window(
-        onCloseRequest = ::exitApplication,
-        title = "Bswap",
+            onCloseRequest = ::exitApplication,
+            title = "Bswap",
         ) {
             val backStack = rememberBackStack()
             BswapApp(backStack)

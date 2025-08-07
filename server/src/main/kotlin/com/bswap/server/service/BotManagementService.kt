@@ -3,6 +3,7 @@ package com.bswap.server.service
 import com.bswap.server.SolanaTokenSwapBot
 import com.bswap.server.SolanaSwapBotConfig
 import com.bswap.server.models.*
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,8 +16,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.random.Random
 
-class BotManagementService {
+class BotManagementService(
+    private val serverWalletService: ServerWalletService? = null
+) {
     private val logger = LoggerFactory.getLogger(BotManagementService::class.java)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _isRunning = AtomicBoolean(false)
     private val _startTime = AtomicLong(0)
@@ -46,6 +50,11 @@ class BotManagementService {
 
                 val status = createBotStatus()
                 _botStatus.value = status
+
+                // Pre-fetch transaction history silently in background
+                _config.walletPublicKey?.toString()?.let { publicKey ->
+                    preFetchTransactionHistory(publicKey)
+                }
 
                 logger.info("Trading bot started successfully")
                 ApiResponse(true, "Bot started successfully", status)
@@ -423,6 +432,29 @@ class BotManagementService {
         // Keep only the latest 100 alerts
         if (_alerts.size > 100) {
             _alerts.removeAt(0)
+        }
+    }
+    
+    /**
+     * Pre-fetch transaction history silently in the background to warm up the cache
+     */
+    private fun preFetchTransactionHistory(publicKey: String) {
+        scope.launch {
+            try {
+                delay(1000) // Small delay to let bot fully start
+                
+                // Silently fetch first page to warm up cache without any logging
+                serverWalletService?.let { service ->
+                    val request = com.bswap.shared.model.WalletHistoryRequest(
+                        publicKey = publicKey,
+                        limit = 50,
+                        offset = 0
+                    )
+                    service.getWalletHistory(request, silent = true)
+                }
+            } catch (e: Exception) {
+                // Silently ignore errors in background prefetch
+            }
         }
     }
 

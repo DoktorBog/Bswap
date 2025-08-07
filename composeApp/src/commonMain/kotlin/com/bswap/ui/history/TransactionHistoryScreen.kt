@@ -14,7 +14,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bswap.app.Strings
 import com.bswap.app.models.WalletViewModel
-import com.bswap.ui.TrianglesBackground
+import com.bswap.ui.ModernBackground
+import com.bswap.ui.PrimaryButton
 import com.bswap.ui.tx.TransactionRow
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -26,25 +27,28 @@ fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Mo
     val history by vm.history.collectAsState()
     val isLoading by vm.isLoading.collectAsState()
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = Strings.back)
-                    }
-                },
-                title = { Text("История транзакций") },
-                actions = {
-                    IconButton(onClick = { vm.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Обновить")
-                    }
-                }
-            )
-        }
-    ) { inner ->
-        Box(modifier = modifier.fillMaxSize()) {
-            TrianglesBackground(modifier = Modifier.matchParentSize())
+    ModernBackground {
+        Scaffold(
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = Strings.back)
+                        }
+                    },
+                    title = { Text("Transaction History") },
+                    actions = {
+                        IconButton(onClick = { vm.refresh() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent
+                    )
+                )
+            }
+        ) { inner ->
             
             when {
                 isLoading && history.isEmpty() -> {
@@ -58,7 +62,11 @@ fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Mo
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("Загрузка транзакций...")
+                            Text(
+                                text = "Loading transactions...",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
                         }
                     }
                 }
@@ -71,16 +79,19 @@ fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Mo
                             .padding(inner),
                         contentAlignment = Alignment.Center
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             Text(
-                                text = "Нет транзакций",
-                                style = MaterialTheme.typography.headlineSmall,
-                                textAlign = TextAlign.Center
+                                text = "No Transactions",
+                                style = MaterialTheme.typography.headlineMedium,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onBackground
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Транзакции появятся здесь после активности кошелька",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Transactions will appear here once your wallet becomes active",
+                                style = MaterialTheme.typography.bodyLarge,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -118,12 +129,11 @@ fun TransactionHistoryScreen(publicKey: String, onBack: () -> Unit, modifier: Mo
                                         .padding(16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Button(
+                                    PrimaryButton(
+                                        text = "Load More",
                                         onClick = { vm.loadMore() },
                                         modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text("Загрузить еще")
-                                    }
+                                    )
                                 }
                             }
                         }

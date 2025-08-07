@@ -14,6 +14,7 @@ import com.bswap.server.routes.tokensRoute
 import com.bswap.server.routes.walletRoutes
 import com.bswap.server.service.BotManagementService
 import com.bswap.server.service.ServerWalletService
+import com.bswap.server.service.TokenMetadataService
 import com.bswap.server.service.WalletService
 import com.bswap.server.validation.TokenValidator
 import com.bswap.server.validation.ValidationConfig
@@ -41,9 +42,10 @@ fun main() {
 
     // Initialize services
     val tokenValidator = TokenValidator(client, ValidationConfig())
-    val solanaRpcClient = SolanaRpcClient(client)
+    val tokenMetadataService = TokenMetadataService(client)
+    val solanaRpcClient = SolanaRpcClient(client, tokenMetadataService = tokenMetadataService)
     val serverWalletService = ServerWalletService(tokenValidator, solanaRpcClient)
-    val botManagementService = BotManagementService()
+    val botManagementService = BotManagementService(serverWalletService)
 
     // Start cache cleanup job
     appScope.launch {

@@ -241,17 +241,23 @@ class ServerWalletService(
         }
     }
 
-    suspend fun getWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
+    suspend fun getWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest, silent: Boolean = false): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
         try {
-            logger.info("💰 ServerWalletService: getWalletHistory called for wallet: ${request.publicKey}, limit: ${request.limit}, offset: ${request.offset}")
+            if (!silent) {
+                logger.info("💰 ServerWalletService: getWalletHistory called for wallet: ${request.publicKey}, limit: ${request.limit}, offset: ${request.offset}")
+            }
 
             val historyPage = if (request.offset == 0) {
                 // First page - get from cache (fast response)
-                logger.info("💰 ServerWalletService: Requesting first page from cache")
+                if (!silent) {
+                    logger.info("💰 ServerWalletService: Requesting first page from cache")
+                }
                 val cachePage = try {
-                    transactionCache.getFirstPage(request.publicKey)
+                    transactionCache.getFirstPage(request.publicKey, silent)
                 } catch (e: Exception) {
-                    logger.warn("💰 ServerWalletService: Cache failed: ${e.message}")
+                    if (!silent) {
+                        logger.warn("💰 ServerWalletService: Cache failed: ${e.message}")
+                    }
                     com.bswap.shared.model.HistoryPage(emptyList(), "page_1")
                 }
                 

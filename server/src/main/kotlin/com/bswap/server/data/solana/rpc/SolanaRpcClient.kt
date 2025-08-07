@@ -1,6 +1,7 @@
 package com.bswap.server.data.solana.rpc
 
 import com.bswap.server.RPC_URL
+import com.bswap.server.service.TokenMetadata
 import com.bswap.shared.model.HistoryPage
 import com.bswap.shared.model.SolanaTx
 import com.bswap.shared.model.TokenInfo
@@ -52,6 +53,7 @@ import kotlin.random.Random
 class SolanaRpcClient(
     private val http: HttpClient,
     private val rpcUrl: String = RPC_URL,
+    private val tokenMetadataService: com.bswap.server.service.TokenMetadataService? = null
 ) {
 
     private object Conf {
@@ -151,7 +153,15 @@ class SolanaRpcClient(
                 async(Dispatchers.IO) { fetchBatch(batch, address) }
             }
         }.let { jobs -> jobs.map { it.await() } }.flatten()
-        HistoryPage(fetched, signatures.lastOrNull())
+
+        // Enrich SPL tokens with metadata
+        val enriched = if (tokenMetadataService != null) {
+            enrichWithTokenMetadata(fetched)
+        } else {
+            fetched
+        }
+
+        HistoryPage(enriched, signatures.lastOrNull())
     }
 
     private suspend fun getSignatures(address: String, limit: Int, before: String?): List<String> {
@@ -399,5 +409,38 @@ class SolanaRpcClient(
         val base = Conf.RETRY_BASE_DELAY_MS shl attempt
         val jitter = Random.nextInt(0, 200)
         delay(min(Conf.RETRY_MAX_DELAY_MS, base + jitter).toLong())
+    }
+
+    private suspend fun enrichWithTokenMetadata(transactions: List<SolanaTx>): List<SolanaTx> {
+        val service = tokenMetadataService ?: return transactions
+
+        val mints: Set<String> = transactions.asSequence()
+            .filter { it.asset == SolanaTx.Asset.SPL }
+            .mapNotNull { it.mint }
+            .map { it.lowercase() }
+            .toSet()
+
+        if (mints.isEmpty()) return transactions
+
+        val metadataMapLower: Map<String, TokenMetadata> = try {
+            val raw = service.batchGetTokenMetadata(mints.toList())
+            raw.entries.associate { (mint, meta) -> mint.lowercase() to meta }
+        } catch (t: Throwable) {
+            logger.warn("enrichWithTokenMetadata: failed to fetch token metadata: ${t.message}")
+            emptyMap()
+        }
+
+        if (metadataMapLower.isEmpty()) return transactions
+        return transactions.map { tx ->
+            if (tx.asset != SolanaTx.Asset.SPL) return@map tx
+            val mintKey = tx.mint?.lowercase() ?: return@map tx
+            val md = metadataMapLower[mintKey] ?: return@map tx
+
+            tx.copy(
+                tokenName = tx.tokenName ?: md.name,
+                tokenSymbol = tx.tokenSymbol ?: md.symbol,
+                tokenLogo = tx.tokenLogo ?: md.logoUri
+            )
+        }
     }
 }

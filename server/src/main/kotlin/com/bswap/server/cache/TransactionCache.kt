@@ -15,7 +15,8 @@ data class WalletCache(
 )
 
 class TransactionCache(
-    private val solanaRpcClient: com.bswap.server.data.solana.rpc.SolanaRpcClient
+    private val solanaRpcClient: com.bswap.server.data.solana.rpc.SolanaRpcClient,
+    private val enableLogging: Boolean = true
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val cache = ConcurrentHashMap<String, WalletCache>()
@@ -34,14 +35,18 @@ class TransactionCache(
      * If no cache - return empty page and start background fetching
      * If fetching already in progress - return what's available in cache
      */
-    suspend fun getFirstPage(publicKey: String): HistoryPage {
-        logger.info("⚡ TransactionCache: Fast first page request for $publicKey")
+    suspend fun getFirstPage(publicKey: String, silent: Boolean = false): HistoryPage {
+        if (!silent && enableLogging) {
+            logger.info("⚡ TransactionCache: Fast first page request for $publicKey")
+        }
         
         val walletCache = cache.getOrPut(publicKey) { WalletCache() }
         
         // If we have cached transactions (regardless of age), return them immediately
         if (walletCache.transactions.isNotEmpty()) {
-            logger.info("⚡ TransactionCache: Returning cached first page INSTANTLY (${walletCache.transactions.take(FIRST_PAGE_SIZE).size} transactions)")
+            if (!silent && enableLogging) {
+                logger.info("⚡ TransactionCache: Returning cached first page INSTANTLY (${walletCache.transactions.take(FIRST_PAGE_SIZE).size} transactions)")
+            }
             
             val firstPage = walletCache.transactions.take(FIRST_PAGE_SIZE)
             val hasMore = walletCache.transactions.size > FIRST_PAGE_SIZE || !walletCache.isFullyFetched
@@ -49,8 +54,10 @@ class TransactionCache(
             // If cache is expired and no fetching is in progress, start background refresh
             if (System.currentTimeMillis() - walletCache.lastUpdateTime > CACHE_EXPIRY_MS && 
                 walletCache.fetchJob?.isActive != true) {
-                logger.info("⚡ TransactionCache: Cache expired, starting background refresh")
-                startBackgroundFetching(publicKey)
+                if (!silent && enableLogging) {
+                    logger.info("⚡ TransactionCache: Cache expired, starting background refresh")
+                }
+                startBackgroundFetching(publicKey, silent)
             }
             
             return HistoryPage(firstPage, if (hasMore) "page_1" else null)
@@ -58,7 +65,9 @@ class TransactionCache(
         
         // If fetching is already in progress, wait longer for some results
         if (walletCache.fetchJob?.isActive == true) {
-            logger.info("⚡ TransactionCache: Fetching in progress, waiting for first results...")
+            if (!silent && enableLogging) {
+                logger.info("⚡ TransactionCache: Fetching in progress, waiting for first results...")
+            }
             
             // Wait max 5 seconds for some results - RPC is working so we should get data
             val startTime = System.currentTimeMillis()
@@ -69,20 +78,26 @@ class TransactionCache(
             }
             
             if (walletCache.transactions.isNotEmpty()) {
-                logger.info("⚡ TransactionCache: Got results from ongoing fetch: ${walletCache.transactions.size} transactions")
+                if (!silent && enableLogging) {
+                    logger.info("⚡ TransactionCache: Got results from ongoing fetch: ${walletCache.transactions.size} transactions")
+                }
                 val firstPage = walletCache.transactions.take(FIRST_PAGE_SIZE)
                 val hasMore = walletCache.transactions.size > FIRST_PAGE_SIZE || !walletCache.isFullyFetched
                 return HistoryPage(firstPage, if (hasMore) "page_1" else null)
             } else {
-                logger.warn("⚡ TransactionCache: Still no results after 5 seconds, returning empty with cursor")
+                if (!silent && enableLogging) {
+                    logger.warn("⚡ TransactionCache: Still no results after 5 seconds, returning empty with cursor")
+                }
             }
         }
         
         // No cache, no ongoing fetch - start background fetching and return empty page
-        logger.info("⚡ TransactionCache: No cache available, starting background fetch, returning empty page INSTANTLY")
+        if (!silent && enableLogging) {
+            logger.info("⚡ TransactionCache: No cache available, starting background fetch, returning empty page INSTANTLY")
+        }
         
         if (walletCache.fetchJob?.isActive != true) {
-            startBackgroundFetching(publicKey)
+            startBackgroundFetching(publicKey, silent)
         }
         
         // Return empty page with cursor to indicate more data is coming
@@ -134,15 +149,17 @@ class TransactionCache(
     /**
      * Start background fetching of remaining pages
      */
-    private fun startBackgroundFetching(publicKey: String) {
+    private fun startBackgroundFetching(publicKey: String, silent: Boolean = false) {
         val walletCache = cache.getOrPut(publicKey) { WalletCache() }
         
         // Cancel existing fetch job if any
         walletCache.fetchJob?.cancel()
         
         walletCache.fetchJob = scope.launch {
-            logger.info("🔄 TransactionCache: Starting background fetch for $publicKey")
-            logger.info("🔄 TransactionCache: Initial state - cached: ${walletCache.transactions.size}, lastCursor: ${walletCache.lastCursor}")
+            if (!silent && enableLogging) {
+                logger.info("🔄 TransactionCache: Starting background fetch for $publicKey")
+                logger.info("🔄 TransactionCache: Initial state - cached: ${walletCache.transactions.size}, lastCursor: ${walletCache.lastCursor}")
+            }
             
             var cursor = walletCache.lastCursor
             var pageCount = if (walletCache.transactions.isEmpty()) 1 else 2 // Start from page 1 if no cache
