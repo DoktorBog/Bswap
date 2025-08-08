@@ -27,7 +27,7 @@ import com.bswap.shared.wallet.toBase58
 import com.bswap.ui.TrianglesBackground
 import com.bswap.ui.UiRadioButton
 import kotlinx.coroutines.launch
-// import wallet.core.jni.CoinType // Removed to avoid duplicate dependency
+import wallet.core.jni.CoinType
 
 @Composable
 fun ImportWalletScreen(
@@ -36,8 +36,8 @@ fun ImportWalletScreen(
 ) {
     val (text, setText) = remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    val coins = listOf("SOLANA")
-    val selected = remember { mutableStateOf("SOLANA") }
+    val coins = listOf(CoinType.SOLANA)
+    val selected = remember { mutableStateOf(CoinType.SOLANA) }
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -56,7 +56,7 @@ fun ImportWalletScreen(
             coins.forEach { coin ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UiRadioButton(selected = selected.value == coin, onClick = { selected.value = coin })
-                    Text(coin, modifier = Modifier.padding(start = 8.dp))
+                    Text(coin.name, modifier = Modifier.padding(start = 8.dp))
                 }
             }
             UiButton(
@@ -64,7 +64,7 @@ fun ImportWalletScreen(
                 onClick = {
                     scope.launch {
                         val words = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-                        val keypair = seedStorage().createWallet(words, coin = "SOLANA")
+                        val keypair = seedStorage().createWallet(words, coin = selected.value)
                         seedStorage().saveSeed(words)
                         seedStorage().savePublicKey(keypair.publicKey.toBase58())
                         backStack.replaceAll(NavKey.BotDashboard)

@@ -18,8 +18,6 @@ import com.bswap.server.service.TokenMetadataService
 import com.bswap.server.service.WalletService
 import com.bswap.server.validation.TokenValidator
 import com.bswap.server.validation.ValidationConfig
-import com.bswap.shared.wallet.WalletEngineUsage
-import com.bswap.shared.wallet.WalletInitializer
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.networking.NetworkDriver
 import io.ktor.client.HttpClient
@@ -41,20 +39,6 @@ import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 fun main() {
-//    // Initialize wallet configuration from file
-//    println("Initializing bot wallet...")
-//    try {
-//        val wallet = WalletInitializer.initializeFromFile(autoCreate = true)
-//        println("Bot wallet initialized successfully:")
-//        println("  Public Key: ${wallet.publicKey}")
-//        println("  Wallet ready for bot operations")
-//    } catch (e: Exception) {
-//        println("ERROR: Failed to initialize bot wallet - ${e.message}")
-//        println("Bot will not be able to perform trades without a valid wallet!")
-//        // Continue startup but log the issue
-//    }
-
-    WalletEngineUsage.applicationStartup()
 
     // Initialize services
     val tokenValidator = TokenValidator(client, ValidationConfig())

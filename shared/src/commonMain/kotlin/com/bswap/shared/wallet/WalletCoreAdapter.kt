@@ -1,8 +1,11 @@
 package com.bswap.shared.wallet
 
-/** Adapter interface for platform-specific wallet/key operations. */
+import wallet.core.jni.CoinType
+import wallet.core.jni.PrivateKey
+
+/** Simple adapter exposing the WalletCore functionality we rely on. */
 interface WalletCoreAdapter {
-    fun generateKeypair(coin: WalletCoin): Keypair
-    fun addressFromPrivateKey(privateKey: ByteArray, coin: WalletCoin): String
-    fun sign(message: ByteArray, privateKey: ByteArray, coin: WalletCoin): ByteArray
+    fun generateKeypair(coin: CoinType): Keypair
+    fun addressFromPrivateKey(privateKey: ByteArray, coin: CoinType): String
+    fun sign(message: ByteArray, privateKey: ByteArray, coin: CoinType): ByteArray
 }

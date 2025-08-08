@@ -10,7 +10,8 @@ import com.bswap.shared.wallet.toBase58
 import com.bswap.wallet.WalletDerivationStrategy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import android.util.Base64
+import wallet.core.jni.CoinType
+import java.util.Base64
 
 private const val PREF_NAME = "seed_store"
 private const val KEY_SEED = "seed"
@@ -59,19 +60,19 @@ private class AndroidSeedStorage(private val context: Context) : SeedStorage {
         mnemonic: List<String>,
         accountIndex: Int,
         strategy: WalletDerivationStrategy,
-        coin: String
+        coin: CoinType
     ): Keypair = withContext(Dispatchers.Default) {
         val keypair = strategy.deriveKeypair(mnemonic, accountIndex, "")
 
         prefs.edit(commit = true) {
             putString(KEY_PUB, keypair.publicKey.toBase58())
-            putString(KEY_SECRET, Base64.encodeToString(keypair.secretKey, Base64.DEFAULT))
+            putString(KEY_SECRET, Base64.getEncoder().encodeToString(keypair.secretKey))
         }
 
         keypair
     }
 
     override suspend fun loadPrivateKey(): ByteArray? = withContext(Dispatchers.IO) {
-        prefs.getString(KEY_SECRET, null)?.let { Base64.decode(it, Base64.DEFAULT) }
+        prefs.getString(KEY_SECRET, null)?.let { Base64.getDecoder().decode(it) }
     }
 }

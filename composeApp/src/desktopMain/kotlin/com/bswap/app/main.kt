@@ -4,24 +4,19 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.bswap.app.BswapApp
 import com.bswap.navigation.rememberBackStack
-import com.bswap.shared.wallet.WalletInitializer
+import org.koin.compose.KoinMultiplatformApplication
+import org.koin.core.context.startKoin
+import com.bswap.app.di.appModule
 
 fun main() = application {
-    // Initialize wallet configuration for desktop app
-    try {
-        val wallet = WalletInitializer.initializeFromFile(autoCreate = true)
-        println("Desktop wallet initialized successfully:")
-        println("  Public Key: ${wallet.publicKey}")
-    } catch (e: Exception) {
-        println("ERROR: Failed to initialize desktop wallet - ${e.message}")
-        e.printStackTrace()
-    }
-    
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "Bswap",
-    ) {
-        val backStack = rememberBackStack()
-        BswapApp(backStack)
+    KoinMultiplatformApplication { 
+        startKoin { modules(appModule) } 
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "Bswap",
+        ) {
+            val backStack = rememberBackStack()
+            BswapApp(backStack)
+        }
     }
 }

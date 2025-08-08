@@ -42,7 +42,7 @@ import com.bswap.seed.SeedPhraseValidator
 import com.bswap.shared.wallet.toBase58
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
-// import wallet.core.jni.CoinType // Removed to avoid duplicate dependency
+import wallet.core.jni.CoinType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -134,7 +134,7 @@ fun ConfirmSeedScreen(
                         if (!SeedPhraseValidator.isValid(mnemonic, selected)) {
                             snackbarHostState.showSnackbar("Words do not match")
                         } else {
-                            val keypair = seedStorage().createWallet(mnemonic, coin = "SOLANA")
+                            val keypair = seedStorage().createWallet(mnemonic, coin = CoinType.SOLANA)
                             seedStorage().savePublicKey(keypair.publicKey.toBase58())
                             backStack.replaceAll(NavKey.BotDashboard)
                         }

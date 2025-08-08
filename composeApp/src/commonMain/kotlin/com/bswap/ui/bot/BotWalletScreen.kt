@@ -34,20 +34,20 @@ fun BotWalletScreen(
 ) {
     val viewModel: BotWalletViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
-
+    
     // Real data from API
     val solBalance = state.balance?.solBalance ?: 0.0
     val totalUSDValue = state.balance?.totalValueUSD ?: 0.0
-
+    
     // Convert tokens and balance data to UI format
     val tokenBalances = state.tokens.map { token ->
         val balance = token.amount?.toDoubleOrNull() ?: 0.0
         val adjustedBalance = if (token.decimals != null && token.decimals!! > 0) {
             balance / Math.pow(10.0, token.decimals!!.toDouble())
         } else balance
-
+        
         val usdValue = state.balance?.tokenBalances?.get(token.symbol ?: token.mint.take(8)) ?: 0.0
-
+        
         TokenBalance(
             symbol = token.symbol ?: token.mint.take(8) + "...",
             balance = adjustedBalance,
@@ -107,7 +107,7 @@ fun BotWalletScreen(
                     }
                 }
             }
-
+            
             // Error state
             if (state.error != null) {
                 item {
@@ -127,9 +127,9 @@ fun BotWalletScreen(
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Button(
-                                onClick = {
+                                onClick = { 
                                     viewModel.clearError()
-                                    viewModel.refresh()
+                                    viewModel.refresh() 
                                 },
                                 modifier = Modifier.padding(top = 8.dp)
                             ) {
@@ -139,7 +139,7 @@ fun BotWalletScreen(
                     }
                 }
             }
-
+            
             item {
                 // Wallet Overview
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -151,13 +151,13 @@ fun BotWalletScreen(
                             text = "Total Balance",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
-
+                        
                         Text(
                             text = "$${"%.2f".format(totalUSDValue)}",
                             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.primary
                         )
-
+                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -191,7 +191,7 @@ fun BotWalletScreen(
                     }
                 }
             }
-
+            
             item {
                 // Quick Actions
                 Card(modifier = Modifier.fillMaxWidth()) {
@@ -203,7 +203,7 @@ fun BotWalletScreen(
                             text = "Quick Actions",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
-
+                        
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
@@ -221,16 +221,16 @@ fun BotWalletScreen(
                             QuickActionButton(
                                 icon = Icons.Default.History,
                                 label = "History",
-                                onClick = {
+                                onClick = { 
                                     // Real bot wallet public key
-                                    onNavigateToTransactionHistory?.invoke("7hKXcEr2FRym5XTHDuscfTtVZ9FAhYkwCFB98QNsamcr")
+                                    onNavigateToTransactionHistory?.invoke("F277zfVkW6VBfkfWPNVXKoBEgCCeVcFYdiZDUX9yCPDW") 
                                 }
                             )
                         }
                     }
                 }
             }
-
+            
             item {
                 Text(
                     text = "Token Holdings",
@@ -238,7 +238,7 @@ fun BotWalletScreen(
                     modifier = Modifier.padding(vertical = 8.dp)
                 )
             }
-
+            
             items(tokenBalances) { token ->
                 TokenBalanceItem(token = token)
             }
@@ -310,7 +310,7 @@ private fun TokenBalanceItem(
                         )
                     }
                 }
-
+                
                 Column {
                     Text(
                         text = token.symbol,
@@ -327,7 +327,7 @@ private fun TokenBalanceItem(
                     )
                 }
             }
-
+            
             Column(
                 horizontalAlignment = Alignment.End
             ) {

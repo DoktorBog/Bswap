@@ -1,3 +1,3 @@
 package com.bswap.ui
 
-actual typealias Preview = androidx.compose.desktop.ui.tooling.preview.Preview
+actual typealias Preview = androidx.compose.ui.tooling.preview.Preview

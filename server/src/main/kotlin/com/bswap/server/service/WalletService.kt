@@ -5,7 +5,7 @@ import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
 import com.bswap.server.data.tokenlist.TokenListRepo
 import com.bswap.server.data.solana.jito.JitoBundlerService
 import com.bswap.shared.model.*
-import com.bswap.shared.wallet.WalletCoin
+import wallet.core.jni.CoinType
 import org.slf4j.LoggerFactory
 
 class WalletService(
@@ -108,9 +108,9 @@ class WalletService(
         Result.failure(e)
     }
 
-    fun createWallet(coin: WalletCoin = WalletCoin.SOLANA): Pair<String, ByteArray> =
+    fun createWallet(coin: CoinType = CoinType.SOLANA): Pair<String, ByteArray> =
         walletRepo.generateAddress(coin)
 
-    fun sign(message: ByteArray, privateKey: ByteArray, coin: WalletCoin = WalletCoin.SOLANA): ByteArray =
+    fun sign(message: ByteArray, privateKey: ByteArray, coin: CoinType = CoinType.SOLANA): ByteArray =
         walletRepo.signMessage(message, privateKey, coin)
 }
