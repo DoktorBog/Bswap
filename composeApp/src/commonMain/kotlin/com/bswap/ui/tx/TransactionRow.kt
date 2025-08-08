@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -30,7 +31,7 @@ import com.bswap.shared.model.SolanaTx
 import coil3.compose.AsyncImage
 
 /**
- * Card displaying detailed information about a transaction.
+ * Card displaying detailed information about a transaction in Solflare-style layout.
  */
 @Composable
 fun TransactionRow(tx: SolanaTx, modifier: Modifier = Modifier) {
@@ -48,80 +49,64 @@ fun TransactionRow(tx: SolanaTx, modifier: Modifier = Modifier) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Token icon or arrow icon
+            // Avatar-style icon
             Box(
-                modifier = Modifier.size(56.dp),
+                modifier = Modifier.size(48.dp),
                 contentAlignment = Alignment.Center
             ) {
-                if (tx.asset == SolanaTx.Asset.SPL && !tx.tokenLogo.isNullOrEmpty()) {
-                    // Show token logo for SPL tokens with fallback
-                    AsyncImage(
-                        model = tx.tokenLogo,
-                        contentDescription = "${tx.tokenSymbol ?: tx.tokenName} logo",
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentScale = ContentScale.Crop,
-                        fallback = null,
-                        error = null,
-                        onError = {
-                            // If image fails to load, we'll show the fallback icon below
-                        }
-                    )
-                } else {
-                    // Show direction arrow with modern styling
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (tx.incoming) 
-                                    MaterialTheme.colorScheme.secondaryContainer
-                                else 
-                                    MaterialTheme.colorScheme.tertiaryContainer
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val icon = when {
-                            tx.incoming -> Icons.Default.ArrowDownward
-                            else -> Icons.Default.ArrowUpward
-                        }
-                        val iconColor = if (tx.incoming) 
-                            MaterialTheme.colorScheme.onSecondaryContainer
-                        else 
-                            MaterialTheme.colorScheme.onTertiaryContainer
-                            
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = iconColor,
-                            modifier = Modifier.size(28.dp)
+                if (tx.asset == SolanaTx.Asset.SPL) {
+                    if (!tx.tokenLogo.isNullOrEmpty()) {
+                        // Try to show token logo
+                        AsyncImage(
+                            model = tx.tokenLogo,
+                            contentDescription = "${tx.tokenSymbol ?: tx.tokenName} logo",
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentScale = ContentScale.Crop,
+                            fallback = null,
+                            error = null
                         )
-                    }
-                }
-                
-                // Show token symbol overlay for SPL tokens
-                if (tx.asset == SolanaTx.Asset.SPL && !tx.tokenSymbol.isNullOrEmpty()) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .size(20.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary,
-                        tonalElevation = 4.dp
-                    ) {
+                    } else {
+                        // No logo - show token symbol
                         Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = tx.tokenSymbol!!.take(1),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary,
+                                text = tx.tokenSymbol?.take(2)?.uppercase() ?: "TK",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold
                             )
                         }
+                    }
+                } else {
+                    // SOL transactions - show SOL avatar
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0xFF9945FF),
+                                        Color(0xFF14F195)
+                                    )
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "◎",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }
@@ -131,107 +116,113 @@ fun TransactionRow(tx: SolanaTx, modifier: Modifier = Modifier) {
             // Transaction details
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Transaction type and token info
+                // Main transaction action - Solflare style
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val actionText = when {
+                        tx.asset == SolanaTx.Asset.SPL && tx.incoming -> "Buy"
+                        tx.asset == SolanaTx.Asset.SPL && !tx.incoming -> "Sell"
+                        tx.incoming -> "Received"
+                        else -> "Sent"
+                    }
+                    
                     Text(
-                        text = if (tx.incoming) "Received" else "Sent",
+                        text = actionText,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     
+                    // Show token symbol for SPL transactions
                     if (tx.asset == SolanaTx.Asset.SPL && !tx.tokenSymbol.isNullOrEmpty()) {
-                        Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier
-                        ) {
-                            Text(
-                                text = tx.tokenSymbol!!,
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Text(
+                            text = tx.tokenSymbol!!,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
                 
-                // Token name or address - make SPL token names more prominent
+                // Token name for SPL or address for SOL - Solflare style
                 Text(
                     text = when {
                         tx.asset == SolanaTx.Asset.SPL && !tx.tokenName.isNullOrEmpty() -> 
                             tx.tokenName!!
                         tx.asset == SolanaTx.Asset.SPL && !tx.tokenSymbol.isNullOrEmpty() -> 
                             "${tx.tokenSymbol} Token"
+                        tx.asset == SolanaTx.Asset.SPL -> "Unknown Token"
                         else -> "${if (tx.incoming) "From" else "To"}: ${tx.address.take(8)}...${tx.address.takeLast(4)}"
                     },
-                    style = if (tx.asset == SolanaTx.Asset.SPL) {
-                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium)
-                    } else {
-                        MaterialTheme.typography.bodyMedium
-                    },
-                    color = if (tx.asset == SolanaTx.Asset.SPL) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                // Transaction signature
+                // Transaction time or signature (simplified for now)
                 Text(
-                    text = "TX: ${tx.signature.take(12)}...",
+                    text = "Recently", // In real app, this would show relative time
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
             
-            // Amount section
+            // Amount section - Solflare style
             Column(
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                val tokenSymbol = when {
-                    tx.asset == SolanaTx.Asset.SPL && !tx.tokenSymbol.isNullOrEmpty() -> tx.tokenSymbol!!
-                    tx.asset == SolanaTx.Asset.SPL -> "TOKEN"
-                    else -> "SOL"
+                // Primary amount with token symbol
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val amountColor = if (tx.incoming) 
+                        Color(0xFF10B981) // Green for incoming
+                    else 
+                        MaterialTheme.colorScheme.onSurface
+                    
+                    Text(
+                        text = if (tx.incoming) "+" else "-",
+                        color = amountColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Text(
+                        text = String.format("%.4f", tx.amount),
+                        color = amountColor,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    
+                    val tokenSymbol = when {
+                        tx.asset == SolanaTx.Asset.SPL && !tx.tokenSymbol.isNullOrEmpty() -> tx.tokenSymbol!!
+                        tx.asset == SolanaTx.Asset.SPL -> "TOKEN"
+                        else -> "SOL"
+                    }
+                    
+                    Text(
+                        text = tokenSymbol,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
                 
-                val amountColor = if (tx.incoming) 
-                    MaterialTheme.colorScheme.secondary 
-                else 
-                    MaterialTheme.colorScheme.error
-                
-                Text(
-                    text = "${if (tx.incoming) "+" else "-"}${String.format("%.4f", tx.amount)}",
-                    color = amountColor,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                Text(
-                    text = tokenSymbol,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
-                )
-                
-                // Show USD estimate only for SOL transactions
+                // USD estimate only for SOL transactions
                 if (tx.asset == SolanaTx.Asset.SOL) {
                     Text(
-                        text = "≈$${String.format("%.2f", tx.amount * 200)}", // Mock SOL price
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        text = "${if (tx.incoming) "+" else "-"}$${String.format("%.2f", tx.amount * 200)}", // Mock SOL price
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

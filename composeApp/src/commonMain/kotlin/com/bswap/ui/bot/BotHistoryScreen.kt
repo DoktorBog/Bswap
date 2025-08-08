@@ -72,7 +72,7 @@ fun BotHistoryScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 16.dp)
         ) {
@@ -87,7 +87,7 @@ fun BotHistoryScreen(
                             text = "Trading Summary",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
-                        
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceAround
@@ -108,7 +108,7 @@ fun BotHistoryScreen(
                     }
                 }
             }
-            
+
             item {
                 Row(
                     modifier = Modifier
@@ -133,7 +133,7 @@ fun BotHistoryScreen(
                     }
                 }
             }
-            
+
             if (error != null) {
                 item {
                     Card(
@@ -154,9 +154,9 @@ fun BotHistoryScreen(
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Button(
-                                onClick = { 
+                                onClick = {
                                     viewModel.clearError()
-                                    viewModel.refresh() 
+                                    viewModel.refresh()
                                 },
                                 modifier = Modifier.padding(top = 8.dp)
                             ) {
@@ -170,7 +170,7 @@ fun BotHistoryScreen(
             items(transactions) { transaction ->
                 TransactionRow(tx = transaction)
             }
-            
+
             if (transactions.isNotEmpty()) {
                 item {
                     Box(
@@ -258,7 +258,7 @@ private fun TradeHistoryCard(
                         modifier = Modifier.padding(8.dp)
                     )
                 }
-                
+
                 Column {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -282,7 +282,7 @@ private fun TradeHistoryCard(
                     )
                 }
             }
-            
+
             if (trade.type == TradeType.SELL) {
                 Column(
                     horizontalAlignment = Alignment.End
@@ -313,7 +313,7 @@ private fun StatusChip(
         TradeStatus.FAILED -> Color(0xFFF44336) to "FAILED"
         TradeStatus.PENDING -> Color(0xFFFF9800) to "PENDING"
     }
-    
+
     Surface(
         modifier = modifier,
         shape = CircleShape,
