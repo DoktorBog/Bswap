@@ -4,13 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bswap.app.api.WalletApi
 import com.bswap.shared.model.SolanaTx
+import com.bswap.shared.wallet.WalletConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 class BotHistoryViewModel(
     private val api: WalletApi,
-    private val botWalletAddress: String = "F277zfVkW6VBfkfWPNVXKoBEgCCeVcFYdiZDUX9yCPDW"
+    private val botWalletAddress: String = WalletConfig.current().publicKey
 ) : ViewModel() {
 
     private val _transactions = MutableStateFlow<List<SolanaTx>>(emptyList())

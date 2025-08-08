@@ -14,8 +14,8 @@ import foundation.metaplex.solana.transactions.SolanaTransactionBuilder
 import foundation.metaplex.solana.transactions.Transaction
 import foundation.metaplex.solana.transactions.TransactionInstruction
 import foundation.metaplex.solanapublickeys.PublicKey
-import wallet.core.jni.PrivateKey
-import wallet.core.jni.Curve
+import com.bswap.server.data.solana.transaction.SolanaEddsa
+import com.bswap.server.data.solana.transaction.SolanaEddsa.createKeypairFromSecretKey
 import foundation.metaplex.base58.encodeToBase58String
 import com.bswap.server.data.solana.transaction.SolanaEddsa
 import org.sol4k.VersionedTransaction
@@ -34,8 +34,8 @@ data class SolanaKeypair(
 class HotSigner(private val keyPair: SolanaKeypair) : Signer {
     override val publicKey: com.solana.publickey.PublicKey = keyPair.publicKey
     override suspend fun signMessage(message: ByteArray): ByteArray {
-        val pk = PrivateKey(keyPair.secretKey.copyOfRange(0, 32))
-        return pk.sign(message, Curve.ED25519)
+        val kp = SolanaEddsa.createKeypairFromSecretKey(keyPair.secretKey.copyOfRange(0, 32))
+        return SolanaEddsa.sign(message, kp)
     }
 }
 

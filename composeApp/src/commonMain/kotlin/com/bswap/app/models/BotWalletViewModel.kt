@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.bswap.app.api.WalletApi
 import com.bswap.app.api.WalletBalance
 import com.bswap.shared.model.TokenInfo
+import com.bswap.shared.wallet.WalletConfig
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,7 @@ data class BotWalletState(
 
 class BotWalletViewModel(
     private val api: WalletApi,
-    private val botWalletAddress: String = "F277zfVkW6VBfkfWPNVXKoBEgCCeVcFYdiZDUX9yCPDW"
+    private val botWalletAddress: String = WalletConfig.current().publicKey
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BotWalletState())

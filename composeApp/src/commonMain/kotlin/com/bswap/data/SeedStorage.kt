@@ -1,9 +1,9 @@
 package com.bswap.data
 
 import com.bswap.shared.wallet.Keypair
-import com.bswap.wallet.Bip44WalletDerivationStrategy
+import com.bswap.shared.wallet.SeedToWalletConverter
+import com.bswap.shared.wallet.WalletConfig
 import com.bswap.wallet.WalletDerivationStrategy
-import wallet.core.jni.CoinType
 
 interface SeedStorage {
     suspend fun saveSeed(words: List<String>)
@@ -14,11 +14,25 @@ interface SeedStorage {
     suspend fun createWallet(
         mnemonic: List<String>,
         accountIndex: Int = 0,
-        strategy: WalletDerivationStrategy = Bip44WalletDerivationStrategy(),
-        coin: CoinType = CoinType.SOLANA,
+        strategy: WalletDerivationStrategy = SharedWalletStrategy(),
+        coin: String = "SOLANA", // Simplified to avoid CoinType dependency
     ): Keypair
 
     suspend fun loadPrivateKey(): ByteArray?
+}
+
+/**
+ * Implementation that uses the shared wallet system
+ */
+class SharedWalletStrategy : WalletDerivationStrategy {
+    override fun deriveKeypair(mnemonic: List<String>, accountIndex: Int, passphrase: String): Keypair {
+        val walletConfig = SeedToWalletConverter.fromSeedPhrase(mnemonic, accountIndex, passphrase)
+        // Convert from WalletConfig to legacy Keypair format for compatibility
+        return Keypair(
+            publicKey = walletConfig.publicKey.encodeToByteArray(), // Simplified conversion
+            secretKey = walletConfig.privateKey.encodeToByteArray()  // Simplified conversion
+        )
+    }
 }
 
 expect fun seedStorage(): SeedStorage

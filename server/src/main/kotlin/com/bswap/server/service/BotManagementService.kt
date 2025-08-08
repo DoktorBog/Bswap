@@ -2,6 +2,7 @@ package com.bswap.server.service
 
 import com.bswap.server.SolanaTokenSwapBot
 import com.bswap.server.SolanaSwapBotConfig
+import com.bswap.shared.wallet.WalletConfig
 import com.bswap.server.models.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,8 +30,9 @@ class BotManagementService(
     private val _failedTrades = AtomicInteger(0)
     private val _lastActivity = AtomicLong(System.currentTimeMillis())
 
+    private var _walletConfig = WalletConfig.current()
     private var _config = SolanaSwapBotConfig()
-    var bot: SolanaTokenSwapBot = SolanaTokenSwapBot(_config)
+    var bot: SolanaTokenSwapBot = SolanaTokenSwapBot(_walletConfig, _config)
     private var _tradingParameters = TradingParameters()
     private var _riskSettings = RiskSettings()
     private var _positions = mutableListOf<BotPosition>()
@@ -47,12 +49,12 @@ class BotManagementService(
                 _isRunning.set(true)
                 _startTime.set(System.currentTimeMillis())
                 _lastActivity.set(System.currentTimeMillis())
-
+                bot.start()
                 val status = createBotStatus()
                 _botStatus.value = status
 
                 // Pre-fetch transaction history silently in background
-                _config.walletPublicKey?.toString()?.let { publicKey ->
+                _walletConfig.publicKey?.let { publicKey ->
                     preFetchTransactionHistory(publicKey)
                 }
 
@@ -72,7 +74,7 @@ class BotManagementService(
             } else {
                 _isRunning.set(false)
                 _startTime.set(0)
-
+                bot.stop()
                 val status = createBotStatus()
                 _botStatus.value = status
 
@@ -99,7 +101,6 @@ class BotManagementService(
             }
 
             _config = SolanaSwapBotConfig(
-                walletPublicKey = _config.walletPublicKey,
                 swapMint = _config.swapMint,
                 solAmountToTrade = newConfig.solAmountToTrade.toBigDecimal(),
                 autoSellAllSpl = newConfig.autoSellAllSpl,
@@ -111,6 +112,10 @@ class BotManagementService(
                 sellAllSplIntervalMs = newConfig.sellAllSplIntervalMs,
                 useJito = newConfig.useJito
             )
+
+            // Update wallet config reference and recreate bot with updated configurations
+            _walletConfig = WalletConfig.current()
+            bot = SolanaTokenSwapBot(_walletConfig, _config)
 
             if (wasRunning) {
                 startBot()
@@ -167,8 +172,16 @@ class BotManagementService(
 
     fun getActiveTokens(): ApiResponse<List<TokenTradeInfo>> {
         return try {
-            // For now, return empty list - we'll implement this when we refactor the bot
-            ApiResponse(true, "Active tokens retrieved", emptyList())
+            val activeTokens = bot.getCurrentState().map { (mint, status) ->
+                TokenTradeInfo(
+                    tokenAddress = mint,
+                    state = status.state.toString(),
+                    createdAt = status.createdAt,
+                    symbol = null, // We don't have symbol info stored currently
+                    balance = null  // We can fetch this from tokenInfo if needed
+                )
+            }
+            ApiResponse(true, "Active tokens retrieved", activeTokens)
         } catch (e: Exception) {
             logger.error("Failed to get active tokens: ${e.message}", e)
             ApiResponse(false, "Failed to retrieve active tokens: ${e.message}")
@@ -186,13 +199,13 @@ class BotManagementService(
                 totalTrades = totalTrades,
                 successfulTrades = successfulTrades,
                 failedTrades = failedTrades,
-                totalVolume = Random.nextDouble(1000.0, 50000.0),
-                totalProfitLoss = Random.nextDouble(-500.0, 2000.0),
+                totalVolume = totalTrades * _config.solAmountToTrade.toDouble(),
+                totalProfitLoss = 0.0, // Will be calculated from actual trades
                 successRate = successRate,
                 averageTradeSize = _config.solAmountToTrade.toDouble(),
-                totalFees = Random.nextDouble(5.0, 100.0),
-                bestTradeProfit = Random.nextDouble(50.0, 500.0),
-                worstTradeLoss = Random.nextDouble(-200.0, -10.0)
+                totalFees = totalTrades * 0.005, // Estimated 0.5% per trade
+                bestTradeProfit = 0.0, // Will track actual best trade
+                worstTradeLoss = 0.0   // Will track actual worst trade
             )
             ApiResponse(true, "Trading statistics retrieved", stats)
         } catch (e: Exception) {
@@ -204,19 +217,20 @@ class BotManagementService(
     private fun createBotStatus(): BotStatus {
         val currentTime = System.currentTimeMillis()
         val uptimeMillis = if (_isRunning.get()) currentTime - _startTime.get() else 0L
+        val activeTokens = bot.getActiveTokensCount()
 
         return BotStatus(
-            isRunning = _isRunning.get(),
+            isRunning = bot.isActive(),
             uptimeMillis = uptimeMillis,
-            activeTokens = _positions.count { it.status == PositionStatus.OPEN },
+            activeTokens = activeTokens,
             totalTrades = _totalTrades.get(),
             successfulTrades = _successfulTrades.get(),
             failedTrades = _failedTrades.get(),
-            currentBalance = Random.nextDouble(1.0, 10.0).toString(), // Mock balance
+            currentBalance = "0.0", // Will be updated by wallet service
             lastActivity = if (_lastActivity.get() > 0) _lastActivity.get() else null,
-            currentToken = if (_positions.isNotEmpty()) _positions.first().symbol else null,
+            currentToken = getCurrentProcessingToken(),
             statistics = createTradingStatistics(),
-            connectedWallet = _config.walletPublicKey?.toString()
+            connectedWallet = _walletConfig.publicKey
         )
     }
 
@@ -230,13 +244,13 @@ class BotManagementService(
             totalTrades = totalTrades,
             successfulTrades = successfulTrades,
             failedTrades = failedTrades,
-            totalVolume = Random.nextDouble(1000.0, 50000.0),
-            totalProfitLoss = Random.nextDouble(-500.0, 2000.0),
+            totalVolume = totalTrades * _config.solAmountToTrade.toDouble(),
+            totalProfitLoss = 0.0, // Will be calculated from actual trades
             successRate = successRate,
             averageTradeSize = _config.solAmountToTrade.toDouble(),
-            totalFees = Random.nextDouble(5.0, 100.0),
-            bestTradeProfit = Random.nextDouble(50.0, 500.0),
-            worstTradeLoss = Random.nextDouble(-200.0, -10.0)
+            totalFees = totalTrades * 0.005, // Estimated 0.5% per trade
+            bestTradeProfit = 0.0, // Will track actual best trade
+            worstTradeLoss = 0.0   // Will track actual worst trade
         )
     }
 
@@ -274,17 +288,35 @@ class BotManagementService(
 
     // Position Management Methods
     fun getOpenPositions(): ApiResponse<List<BotPosition>> {
-        val openPositions = _positions.filter { it.status == PositionStatus.OPEN }
-        return ApiResponse(true, "Open positions retrieved", openPositions)
+        return try {
+            val openPositions = bot.getCurrentState().entries
+                .filter { it.value.state.toString() == "Swapped" }
+                .map { (mint, status) ->
+                    BotPosition(
+                        tokenAddress = mint,
+                        symbol = mint.substring(0, 8) + "...", // Shortened address as symbol
+                        amount = _config.solAmountToTrade.toDouble(),
+                        entryPrice = _config.solAmountToTrade.toDouble(),
+                        currentPrice = _config.solAmountToTrade.toDouble(), // Would need price service for real price
+                        unrealizedPnL = 0.0, // Would calculate based on current vs entry price
+                        entryTime = status.createdAt,
+                        status = PositionStatus.OPEN
+                    )
+                }
+            ApiResponse(true, "Open positions retrieved", openPositions)
+        } catch (e: Exception) {
+            logger.error("Failed to get open positions: ${e.message}", e)
+            ApiResponse(false, "Failed to retrieve open positions: ${e.message}")
+        }
     }
 
     fun closePosition(tokenAddress: String): ApiResponse<String> {
         return try {
-            val position = _positions.find { it.tokenAddress == tokenAddress && it.status == PositionStatus.OPEN }
-            if (position != null) {
-                val index = _positions.indexOf(position)
-                _positions[index] = position.copy(status = PositionStatus.CLOSING)
-                // Simulate closing the position
+            val tokenState = bot.getCurrentState()[tokenAddress]
+            if (tokenState != null && tokenState.state.toString() == "Swapped") {
+                bot.sellOneToken(tokenAddress)
+                _totalTrades.incrementAndGet()
+                _lastActivity.set(System.currentTimeMillis())
                 logger.info("Closing position for token: $tokenAddress")
                 ApiResponse(true, "Position close initiated for $tokenAddress")
             } else {
@@ -414,6 +446,12 @@ class BotManagementService(
     }
 
     // Helper Methods
+    private fun getCurrentProcessingToken(): String? {
+        return bot.getCurrentState().entries
+            .find { it.value.state.toString() == "TradePending" || it.value.state.toString() == "Selling" }
+            ?.key
+    }
+
     private fun generateDailyPnL(days: Int): Map<String, Double> {
         val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         val result = mutableMapOf<String, Double>()
@@ -434,7 +472,7 @@ class BotManagementService(
             _alerts.removeAt(0)
         }
     }
-    
+
     /**
      * Pre-fetch transaction history silently in the background to warm up the cache
      */
@@ -442,7 +480,7 @@ class BotManagementService(
         scope.launch {
             try {
                 delay(1000) // Small delay to let bot fully start
-                
+
                 // Silently fetch first page to warm up cache without any logging
                 serverWalletService?.let { service ->
                     val request = com.bswap.shared.model.WalletHistoryRequest(

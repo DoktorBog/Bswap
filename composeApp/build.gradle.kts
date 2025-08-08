@@ -14,7 +14,7 @@ plugins {
 kotlin {
     androidTarget()
     jvmToolchain(17)
-    
+
     jvm("desktop")
 
     if (project.findProperty("enableWasm") == "true") {
@@ -36,13 +36,13 @@ kotlin {
             binaries.executable()
         }
     }
-    
+
     sourceSets {
         val desktopMain by getting
         val wasmJsMain = if (project.findProperty("enableWasm") == "true") {
             maybeCreate("wasmJsMain")
         } else null
-        
+
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
@@ -51,7 +51,8 @@ kotlin {
             implementation("org.bitcoinj:bitcoinj-core:${libs.versions.bitcoinj.get()}") {
                 exclude(group = "com.google.protobuf", module = "protobuf-javalite")
             }
-            implementation(libs.wallet.core)
+            // wallet.core is already included in shared module
+            implementation(compose.preview)
             implementation(project(":shared"))
         }
         commonMain.dependencies {
@@ -78,9 +79,9 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
         }
-        
-        androidMain.dependencies {
-            implementation(compose.preview)
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
         }
         wasmJsMain?.dependencies {
             implementation(libs.ktor.client.js)

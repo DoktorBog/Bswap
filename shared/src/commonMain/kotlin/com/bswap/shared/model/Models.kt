@@ -10,6 +10,7 @@ data class TokenInfo(
     val decimals: Int? = null,
     val amount: String? = null,
     val logoUri: String? = null,
+    val usdValue: Double? = null,
 )
 
 @Serializable
