@@ -21,9 +21,15 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
             }
         }
+        val commonTest by getting {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
+        }
         val jvmMain by getting {
             dependencies {
                 implementation(libs.sol4k)
+                implementation("org.bouncycastle:bcprov-jdk15on:1.70")
             }
         }
         val androidMain by getting {

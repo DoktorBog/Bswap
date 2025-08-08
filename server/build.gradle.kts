@@ -41,6 +41,12 @@ dependencies {
     implementation(libs.metaplex.solana.rpc)
 
     implementation(project(":shared"))
+    implementation("org.bouncycastle:bcprov-jdk15on:1.70")
 
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")   // актуальная на август 2025
+}
+
+// Exclude Android-only wallet-core AAR when resolving JVM server configurations
+configurations.configureEach {
+    exclude(group = "com.portto", module = "walletcore")
 }

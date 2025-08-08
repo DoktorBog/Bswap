@@ -150,7 +150,7 @@ data class ParsedData(
 @Serializable
 data class TokenInfo(
     val isNative: Boolean,
-    val mint: String,
+    val address: String,
     val owner: String,
     val state: String,
     val tokenAmount: TokenAmount

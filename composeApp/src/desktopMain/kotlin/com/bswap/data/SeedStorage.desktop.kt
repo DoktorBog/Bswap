@@ -3,8 +3,6 @@ package com.bswap.data
 import com.bswap.shared.wallet.Keypair
 import com.bswap.shared.wallet.toBase58
 import com.bswap.wallet.WalletDerivationStrategy
-import com.bswap.wallet.Bip44WalletDerivationStrategy
-import wallet.core.jni.CoinType
 
 actual fun seedStorage(): SeedStorage = InMemorySeedStorage
 
@@ -22,7 +20,7 @@ private object InMemorySeedStorage : SeedStorage {
         mnemonic: List<String>,
         accountIndex: Int,
         strategy: WalletDerivationStrategy,
-        coin: CoinType
+        coin: String
     ): Keypair {
         val keypair = strategy.deriveKeypair(mnemonic, accountIndex, "")
         secret = keypair.secretKey
