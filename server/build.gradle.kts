@@ -13,6 +13,11 @@ application {
         listOf("-Dio.ktor.development=${extra["io.ktor.development"] ?: "false"}")
 }
 
+// Allow interactive input when running via `./gradlew :server:run`
+tasks.named<JavaExec>("run") {
+    standardInput = System.`in`
+}
+
 ktor {
     fatJar {
         archiveFileName.set("bswap-$version.jar")
@@ -26,6 +31,7 @@ dependencies {
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)
     testImplementation(libs.kotlin.test.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.cio)

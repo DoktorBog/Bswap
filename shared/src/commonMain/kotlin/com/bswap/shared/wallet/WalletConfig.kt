@@ -4,7 +4,7 @@ package com.bswap.shared.wallet
  * Wallet configuration containing both public key and private key for Solana operations.
  */
 data class WalletConfig(
-    val publicKey: String = "F277zfVkW6VBfkfWPNVXKoBEgCCeVcFYdiZDUX9yCPDW",
+    val publicKey: String = "",
     val privateKey: String = ""
 ) {
     companion object {

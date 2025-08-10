@@ -9,17 +9,19 @@ import com.bswap.server.data.solana.swap.jupiter.JupiterSwapService
 import com.bswap.server.data.tokenlist.TokenListRepo
 import com.bswap.server.routes.apiRoute
 import com.bswap.server.routes.botRoutes
+import com.bswap.server.routes.commandRoutes
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
 import com.bswap.server.routes.walletRoutes
 import com.bswap.server.service.BotManagementService
+import com.bswap.server.service.PriceService
 import com.bswap.server.service.ServerWalletService
 import com.bswap.server.service.TokenMetadataService
 import com.bswap.server.service.WalletService
 import com.bswap.server.validation.TokenValidator
 import com.bswap.server.validation.ValidationConfig
-import com.bswap.shared.wallet.WalletEngineUsage
 import com.bswap.shared.wallet.WalletInitializer
+import com.bswap.shared.wallet.SeedToWalletConverter
 import foundation.metaplex.rpc.RPC
 import foundation.metaplex.rpc.networking.NetworkDriver
 import io.ktor.client.HttpClient
@@ -41,27 +43,22 @@ import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 fun main() {
-//    // Initialize wallet configuration from file
-//    println("Initializing bot wallet...")
-//    try {
-//        val wallet = WalletInitializer.initializeFromFile(autoCreate = true)
-//        println("Bot wallet initialized successfully:")
-//        println("  Public Key: ${wallet.publicKey}")
-//        println("  Wallet ready for bot operations")
-//    } catch (e: Exception) {
-//        println("ERROR: Failed to initialize bot wallet - ${e.message}")
-//        println("Bot will not be able to perform trades without a valid wallet!")
-//        // Continue startup but log the issue
-//    }
-
-    WalletEngineUsage.applicationStartup()
+    // Prompt for seed phrase interactively on server start
+    val seedPhrase = prompt("Enter your 12/24-word seed phrase (single line): ")
+    require(seedPhrase.isNotBlank()) { "Seed phrase is required" }
+    val wallet = WalletInitializer.initializeFromSeed(seedPhrase)
+    println("Wallet initialized. Public Key: ${wallet.publicKey}")
+    privateKey = wallet.privateKey
 
     // Initialize services
     val tokenValidator = TokenValidator(client, ValidationConfig())
     val tokenMetadataService = TokenMetadataService(client)
     val solanaRpcClient = SolanaRpcClient(client, tokenMetadataService = tokenMetadataService)
-    val serverWalletService = ServerWalletService(tokenValidator, solanaRpcClient)
+    val dexScreenerClient = DexScreenerClientImpl(client)
+    val priceService = PriceService(client, dexScreenerClient)
+    val serverWalletService = ServerWalletService(tokenValidator, solanaRpcClient, priceService)
     val botManagementService = BotManagementService(serverWalletService)
+    val commandProcessor = com.bswap.server.command.CommandProcessor(botManagementService, serverWalletService, priceService)
 
     // Start cache cleanup job
     appScope.launch {
@@ -86,8 +83,19 @@ fun main() {
             apiRoute(dexScreenerRepository.tokenProfilesFlow)
             walletRoutes(serverWalletService)
             botRoutes(botManagementService)
+            commandRoutes(commandProcessor)
         }
     }.start(wait = true)
+}
+
+private fun prompt(message: String): String {
+    print(message)
+    return try {
+        val br = java.io.BufferedReader(java.io.InputStreamReader(System.`in`))
+        br.readLine()?.trim().orEmpty()
+    } catch (e: Exception) {
+        ""
+    }
 }
 
 fun SolanaTokenSwapBot.runDexScreenerSwap(
@@ -141,27 +149,6 @@ val walletRepository = com.bswap.shared.wallet.WalletRepository(
             com.bswap.shared.wallet.WalletCoreAdapterImpl()
         )
     )
-)
-
-val walletService = WalletService(
-    SolanaRpcClient(client),
-    TokenListRepo(client),
-    JupiterSwapService(client),
-    JitoBundlerService(
-        client = client,
-        jitoFeeLamports = 1000,
-        tipAccounts = listOf(
-            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLkY",
-            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
-            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
-            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimctcNZ5pGwDcEt",
-            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh"
-        )
-    ),
-    walletRepository
 )
 
 private fun createRPC(client: HttpClient) =

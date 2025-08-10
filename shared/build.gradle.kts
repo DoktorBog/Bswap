@@ -5,6 +5,7 @@ plugins {
 }
 
 kotlin {
+    jvmToolchain(17)
     val enableWasm = project.findProperty("enableWasm") == "true"
 
     androidTarget()
@@ -19,6 +20,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.sol4k)
             }
         }
         val commonTest by getting {

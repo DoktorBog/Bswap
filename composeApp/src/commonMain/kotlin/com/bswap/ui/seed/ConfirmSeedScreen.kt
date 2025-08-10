@@ -34,12 +34,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bswap.app.models.ConfirmSeedViewModel
+import com.bswap.app.WalletRefreshManager
 import com.bswap.data.seedStorage
 import com.bswap.navigation.NavKey
 import com.bswap.navigation.pop
 import com.bswap.navigation.replaceAll
 import com.bswap.seed.SeedPhraseValidator
 import com.bswap.shared.wallet.toBase58
+import com.bswap.shared.wallet.WalletConfig
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 // import wallet.core.jni.CoinType // Removed to avoid duplicate dependency
@@ -136,6 +138,11 @@ fun ConfirmSeedScreen(
                         } else {
                             val keypair = seedStorage().createWallet(mnemonic, coin = "SOLANA")
                             seedStorage().savePublicKey(keypair.publicKey.toBase58())
+                            
+                            // Initialize WalletConfig for server API calls
+                            WalletConfig.initializeFromSeed(mnemonic)
+                            
+                            WalletRefreshManager.triggerRefresh()
                             backStack.replaceAll(NavKey.BotDashboard)
                         }
                     }

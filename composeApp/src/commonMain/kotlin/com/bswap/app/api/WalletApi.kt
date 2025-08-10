@@ -31,14 +31,14 @@ data class WalletBalance(
 class WalletApi(private val client: HttpClient) {
 
     suspend fun walletInfo(address: String): WalletInfo {
-        val balance = getBalance(address)
-        val tokens = getTokens(address)
+        val balance = getBalance()
+        val tokens = getTokens()
         return WalletInfo(address, balance, tokens)
     }
 
-    suspend fun getBalance(address: String): Long {
+    suspend fun getBalance(): Long {
         return try {
-            val response = client.get("$baseUrl/wallet/balance/$address").body<String>()
+            val response = client.get("$baseUrl/wallet/balance").body<String>()
             val apiResponse = kotlinx.serialization.json.Json.decodeFromString<ApiResponse<WalletBalance>>(response)
             if (apiResponse.success && apiResponse.data != null) {
                 (apiResponse.data.solBalance * 1_000_000_000).toLong() // Convert SOL to lamports
@@ -51,9 +51,9 @@ class WalletApi(private val client: HttpClient) {
         }
     }
 
-    suspend fun getTokens(address: String): List<TokenInfo> {
+    suspend fun getTokens(): List<TokenInfo> {
         return try {
-            val response = client.get("$baseUrl/wallet/tokens/$address").body<String>()
+            val response = client.get("$baseUrl/wallet/tokens").body<String>()
             val apiResponse = kotlinx.serialization.json.Json.decodeFromString<ApiResponse<List<TokenInfo>>>(response)
             if (apiResponse.success && apiResponse.data != null) {
                 apiResponse.data
@@ -66,9 +66,9 @@ class WalletApi(private val client: HttpClient) {
         }
     }
 
-    suspend fun getWalletBalance(address: String): WalletBalance? {
+    suspend fun getWalletBalance(): WalletBalance? {
         return try {
-            val response = client.get("$baseUrl/wallet/balance/$address").body<String>()
+            val response = client.get("$baseUrl/wallet/balance").body<String>()
             val apiResponse = kotlinx.serialization.json.Json.decodeFromString<ApiResponse<WalletBalance>>(response)
             if (apiResponse.success && apiResponse.data != null) {
                 apiResponse.data
@@ -82,7 +82,6 @@ class WalletApi(private val client: HttpClient) {
     }
 
     suspend fun getHistory(
-        address: String,
         limit: Int = 10,
         cursor: String? = null,
     ): HistoryPage {
@@ -94,12 +93,11 @@ class WalletApi(private val client: HttpClient) {
                 } else 0
             } ?: 0
             
-            println("📱 CLIENT: Getting history for $address, limit=$limit, offset=$offset (from cursor: $cursor)")
+            println("📱 CLIENT: Getting history, limit=$limit, offset=$offset (from cursor: $cursor)")
             
             val response = client.post("$baseUrl/wallet/history") {
                 contentType(ContentType.Application.Json)
                 setBody(WalletHistoryRequest(
-                    publicKey = address,
                     limit = limit,
                     offset = offset
                 ))
@@ -107,7 +105,7 @@ class WalletApi(private val client: HttpClient) {
             
             println("📱 CLIENT: Raw response length: ${response.length}")
             
-            // The server responds with HistoryPage directly (not wrapped in ApiResponse)
+            // The server responds with HistoryPage directly; however ensure it's valid JSON
             val historyPage = kotlinx.serialization.json.Json.decodeFromString<HistoryPage>(response)
             println("📱 CLIENT: Decoded ${historyPage.transactions.size} transactions, nextCursor: ${historyPage.nextCursor}")
             historyPage

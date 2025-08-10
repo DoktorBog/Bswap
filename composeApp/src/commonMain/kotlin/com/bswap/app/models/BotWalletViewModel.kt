@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bswap.app.api.WalletApi
 import com.bswap.app.api.WalletBalance
+import com.bswap.app.WalletRefreshManager
 import com.bswap.shared.model.TokenInfo
 import com.bswap.shared.wallet.WalletConfig
 import kotlinx.coroutines.async
@@ -20,8 +21,7 @@ data class BotWalletState(
 )
 
 class BotWalletViewModel(
-    private val api: WalletApi,
-    private val botWalletAddress: String = WalletConfig.current().publicKey
+    private val api: WalletApi
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BotWalletState())
@@ -29,6 +29,13 @@ class BotWalletViewModel(
 
     init {
         loadWalletData()
+        
+        // Listen for refresh triggers
+        viewModelScope.launch {
+            WalletRefreshManager.refreshTrigger.collect {
+                refresh()
+            }
+        }
     }
 
     fun refresh() {
@@ -42,10 +49,10 @@ class BotWalletViewModel(
         try {
             // Load balance and tokens in parallel
             val balanceDeferred = async { 
-                api.getWalletBalance(botWalletAddress) 
+                api.getWalletBalance() 
             }
             val tokensDeferred = async { 
-                api.getTokens(botWalletAddress) 
+                api.getTokens() 
             }
             
             val balance = balanceDeferred.await()

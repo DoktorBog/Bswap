@@ -7,18 +7,17 @@ import com.bswap.server.data.solana.transaction.TokenInfo
 import com.bswap.shared.wallet.WalletConfig
 import foundation.metaplex.solanapublickeys.PublicKey
 import java.math.BigDecimal
-import java.io.File
 
 data class SolanaSwapBotConfig(
     val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
-    val solAmountToTrade: BigDecimal = BigDecimal("0.0005"),
-    val autoSellAllSpl: Boolean = false,
+    val solAmountToTrade: BigDecimal = BigDecimal("0.001"),
+    val autoSellAllSpl: Boolean = true,
     val sellAllSplIntervalMs: Long = 60_000,
     val closeAccountsIntervalMs: Long = 60_000,
     val zeroBalanceCloseBatch: Int = 10,
     val splSellBatch: Int = 3,
     val sellWaitMs: Long = 60_000,
-    val useJito: Boolean = false,
+    val useJito: Boolean = true,
     val validationMaxRisk: Double = 0.7,
     val maxKnownTokens: Int = 1000,
     val strategySettings: TradingStrategySettings = TradingStrategySettings(),
@@ -173,5 +172,4 @@ interface TradingRuntime {
     suspend fun allTokens(): List<TokenInfo>
 }
 
-
-val privateKey: String  = ""
+var privateKey: String = ""

@@ -13,7 +13,8 @@ import kotlin.random.Random
 
 class ServerWalletService(
     private val tokenValidator: TokenValidator,
-    private val solanaRpcClient: com.bswap.server.data.solana.rpc.SolanaRpcClient
+    private val solanaRpcClient: com.bswap.server.data.solana.rpc.SolanaRpcClient,
+    private val priceService: PriceService? = null
 ) {
     private val transactionCache = com.bswap.server.cache.TransactionCache(solanaRpcClient)
     private val logger = LoggerFactory.getLogger(ServerWalletService::class.java)
@@ -156,8 +157,10 @@ class ServerWalletService(
                 emptyMap()
             }
 
-            // Calculate total USD value (simplified)
-            val solPriceUSD = 200.0 // Mock SOL price
+            // Calculate total USD value using real prices
+            val solPriceUSD = try {
+                priceService?.getTokenPrice(PriceService.SOL_MINT)?.priceUsd ?: 200.0
+            } catch (_: Exception) { 200.0 }
             val totalValueUSD = solBalance * solPriceUSD + tokenBalances.values.sum()
 
             val balance = WalletBalance(
@@ -190,14 +193,23 @@ class ServerWalletService(
 
             // Get real SPL tokens from Solana RPC
             val tokens = try {
-                solanaRpcClient.getSPLTokens(publicKey).map { token ->
+                val splTokens = solanaRpcClient.getSPLTokens(publicKey)
+                
+                // Get prices for all tokens at once for efficiency
+                val tokenMints = splTokens.map { it.mint }
+                val prices = priceService?.getTokenPrices(tokenMints) ?: emptyMap()
+                
+                splTokens.map { token ->
+                    val usdValue = priceService?.calculateUsdValue(token.mint, token.amount, token.decimals)
+                    
                     com.bswap.shared.model.TokenInfo(
                         mint = token.mint,
                         symbol = getTokenSymbol(token.mint),
                         name = getTokenName(token.mint),
                         decimals = token.decimals,
                         amount = token.amount,
-                        logoUri = null
+                        logoUri = null,
+                        usdValue = usdValue
                     )
                 }
             } catch (e: Exception) {
@@ -241,10 +253,87 @@ class ServerWalletService(
         }
     }
 
-    suspend fun getWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest, silent: Boolean = false): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
+    suspend fun getBotWalletBalance(): ApiResponse<WalletBalance> = withContext(Dispatchers.IO) {
+        try {
+            // Get the configured bot wallet public key
+            val botPublicKey = getBotWalletPublicKey()
+            if (botPublicKey.isEmpty()) {
+                return@withContext ApiResponse<WalletBalance>(
+                    success = false,
+                    message = "No bot wallet configured"
+                )
+            }
+            
+            logger.info("Getting balance for bot wallet: $botPublicKey")
+            return@withContext getWalletBalance(botPublicKey)
+        } catch (e: Exception) {
+            logger.error("Failed to get bot wallet balance", e)
+            ApiResponse(
+                success = false,
+                message = "Failed to get bot wallet balance: ${e.message}"
+            )
+        }
+    }
+
+    suspend fun getBotWalletTokens(): ApiResponse<List<com.bswap.shared.model.TokenInfo>> = withContext(Dispatchers.IO) {
+        try {
+            // Get the configured bot wallet public key
+            val botPublicKey = getBotWalletPublicKey()
+            if (botPublicKey.isEmpty()) {
+                return@withContext ApiResponse<List<com.bswap.shared.model.TokenInfo>>(
+                    success = false,
+                    message = "No bot wallet configured"
+                )
+            }
+            
+            logger.info("Getting tokens for bot wallet: $botPublicKey")
+            return@withContext getWalletTokens(botPublicKey)
+        } catch (e: Exception) {
+            logger.error("Failed to get bot wallet tokens", e)
+            ApiResponse(
+                success = false,
+                message = "Failed to get bot wallet tokens: ${e.message}"
+            )
+        }
+    }
+
+    suspend fun getBotWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest, silent: Boolean = false): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
+        try {
+            // Get the configured bot wallet public key
+            val botPublicKey = getBotWalletPublicKey()
+            if (botPublicKey.isEmpty()) {
+                return@withContext ApiResponse<WalletHistoryResponse>(
+                    success = false,
+                    message = "No bot wallet configured"
+                )
+            }
+            
+            logger.info("Getting history for bot wallet: $botPublicKey")
+            // Create a new request with the bot wallet public key
+            val botWalletRequest = com.bswap.shared.model.WalletHistoryRequest(
+                limit = request.limit,
+                offset = request.offset
+            )
+            return@withContext getWalletHistory(botWalletRequest, botPublicKey, silent)
+        } catch (e: Exception) {
+            logger.error("Failed to get bot wallet history", e)
+            ApiResponse(
+                success = false,
+                message = "Failed to get bot wallet history: ${e.message}"
+            )
+        }
+    }
+
+    private fun getBotWalletPublicKey(): String {
+        // For now, use a hardcoded bot wallet public key
+        // In production, this should come from configuration or be dynamically set
+        return "CtKJfXzxVN5cwc1krUrCu2Sd44ybjttJDjopJC1WqPra"
+    }
+
+    suspend fun getWalletHistory(request: com.bswap.shared.model.WalletHistoryRequest, publicKey: String, silent: Boolean = false): ApiResponse<WalletHistoryResponse> = withContext(Dispatchers.IO) {
         try {
             if (!silent) {
-                logger.info("💰 ServerWalletService: getWalletHistory called for wallet: ${request.publicKey}, limit: ${request.limit}, offset: ${request.offset}")
+                logger.info("💰 ServerWalletService: getWalletHistory called for wallet: $publicKey, limit: ${request.limit}, offset: ${request.offset}")
             }
 
             val historyPage = if (request.offset == 0) {
@@ -253,7 +342,7 @@ class ServerWalletService(
                     logger.info("💰 ServerWalletService: Requesting first page from cache")
                 }
                 val cachePage = try {
-                    transactionCache.getFirstPage(request.publicKey, silent)
+                    transactionCache.getFirstPage(publicKey, silent)
                 } catch (e: Exception) {
                     if (!silent) {
                         logger.warn("💰 ServerWalletService: Cache failed: ${e.message}")
@@ -264,12 +353,12 @@ class ServerWalletService(
                 // If cache is empty and no background fetch is running, add some mock data as fallback
                 if (cachePage.transactions.isEmpty()) {
                     logger.info("💰 ServerWalletService: Cache empty, checking if we should add mock data as fallback")
-                    val cacheStats = transactionCache.getCacheStats(request.publicKey)
+                    val cacheStats = transactionCache.getCacheStats(publicKey)
                     val isBackgroundFetching = cacheStats["isBackgroundFetching"] as? Boolean ?: false
                     
                     if (!isBackgroundFetching) {
                         logger.info("💰 ServerWalletService: No background fetch running, providing mock data")
-                        generateMockHistoryPage(request.publicKey, request.limit)
+                        generateMockHistoryPage(publicKey, request.limit)
                     } else {
                         logger.info("💰 ServerWalletService: Background fetch running, returning empty page")
                         cachePage
@@ -282,7 +371,7 @@ class ServerWalletService(
                 val pageIndex = request.offset / request.limit
                 logger.info("💰 ServerWalletService: Requesting page $pageIndex from cache")
                 try {
-                    transactionCache.getPage(request.publicKey, pageIndex, request.limit)
+                    transactionCache.getPage(publicKey, pageIndex, request.limit)
                 } catch (e: Exception) {
                     logger.warn("💰 ServerWalletService: Cache page failed: ${e.message}")
                     com.bswap.shared.model.HistoryPage(emptyList(), null)
@@ -297,7 +386,7 @@ class ServerWalletService(
             val transactions = historyPage.transactions.map { solanaTx ->
                 WalletTransaction(
                     signature = solanaTx.signature,
-                    publicKey = request.publicKey,
+                    publicKey = publicKey,
                     type = if (solanaTx.incoming) TransactionType.RECEIVE else TransactionType.SEND,
                     amount = kotlin.math.abs(solanaTx.amount),
                     token = "SOL",
@@ -311,7 +400,7 @@ class ServerWalletService(
             logger.info("🔍 DETAILED: ServerWalletService - converted to ${transactions.size} WalletTransactions")
             
             val response = WalletHistoryResponse(
-                publicKey = request.publicKey,
+                publicKey = publicKey,
                 transactions = transactions,
                 totalCount = transactions.size,
                 hasMore = historyPage.nextCursor != null
@@ -464,6 +553,7 @@ class ServerWalletService(
     fun cleanupCache() {
         logger.info("🧹 ServerWalletService: Running cache cleanup")
         transactionCache.cleanupExpiredCache()
+        priceService?.cleanupCache()
     }
     
     /**

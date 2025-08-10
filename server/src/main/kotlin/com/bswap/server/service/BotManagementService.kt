@@ -484,11 +484,10 @@ class BotManagementService(
                 // Silently fetch first page to warm up cache without any logging
                 serverWalletService?.let { service ->
                     val request = com.bswap.shared.model.WalletHistoryRequest(
-                        publicKey = publicKey,
                         limit = 50,
                         offset = 0
                     )
-                    service.getWalletHistory(request, silent = true)
+                    service.getWalletHistory(request, publicKey, silent = true)
                 }
             } catch (e: Exception) {
                 // Silently ignore errors in background prefetch

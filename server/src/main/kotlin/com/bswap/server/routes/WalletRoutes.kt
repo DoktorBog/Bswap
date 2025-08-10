@@ -66,13 +66,12 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
             }
         }
         
-        // Get wallet balance - новый эндпоинт
-        get("/balance/{publicKey}") {
+        // Get wallet balance - for configured bot wallet
+        get("/balance") {
             try {
-                val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
-                logger.info("Getting balance for wallet: $publicKey")
+                logger.info("Getting balance for bot wallet")
                 
-                val response = walletService.getWalletBalance(publicKey)
+                val response = walletService.getBotWalletBalance()
                 
                 if (response.success) {
                     call.respond(HttpStatusCode.OK, response)
@@ -91,13 +90,12 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
             }
         }
 
-        // Get wallet tokens - новый эндпоинт
-        get("/tokens/{publicKey}") {
+        // Get wallet tokens - for configured bot wallet
+        get("/tokens") {
             try {
-                val publicKey = call.parameters["publicKey"] ?: throw IllegalArgumentException("Public key is required")
-                logger.info("Getting tokens for wallet: $publicKey")
+                logger.info("Getting tokens for bot wallet")
                 
-                val response = walletService.getWalletTokens(publicKey)
+                val response = walletService.getBotWalletTokens()
                 
                 if (response.success) {
                     call.respond(HttpStatusCode.OK, response)
@@ -120,9 +118,9 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
         post("/history") {
             try {
                 val request = call.receive<WalletHistoryRequest>()
-                logger.info("🔍 DETAILED: WalletRoutes - received history request for wallet: ${request.publicKey}, limit: ${request.limit}")
+                logger.info("🔍 DETAILED: WalletRoutes - received history request for bot wallet, limit: ${request.limit}")
                 
-                val response = walletService.getWalletHistory(request)
+                val response = walletService.getBotWalletHistory(request)
                 logger.info("🔍 DETAILED: WalletRoutes - service returned success: ${response.success}, data: ${response.data != null}")
                 
                 if (response.success && response.data != null) {

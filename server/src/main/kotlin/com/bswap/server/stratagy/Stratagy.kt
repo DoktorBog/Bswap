@@ -208,8 +208,8 @@ class SmaCrossBasedStrategy(
         // Update price history for all tokens
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            // Add current price (mock implementation - integrate with real price feed)
-            history.add(token.usdValue ?: 1.0)
+            // Use current token UI amount as a proxy for price if usdValue is unavailable
+            history.add(token.tokenAmount.uiAmount ?: 1.0)
             // Keep only last 50 prices for performance
             if (history.size > 50) history.removeAt(0)
 
@@ -262,7 +262,7 @@ class RsiBasedTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            history.add(token.usdValue ?: 1.0)
+            history.add(token.tokenAmount.uiAmount ?: 1.0)
             if (history.size > 50) history.removeAt(0)
 
             if (history.size >= cfg.period + 1) {
@@ -312,7 +312,7 @@ class BreakoutTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            val currentPrice = token.usdValue ?: 1.0
+            val currentPrice = token.tokenAmount.uiAmount ?: 1.0
             history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
@@ -366,7 +366,7 @@ class BollingerMeanReversionTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            val currentPrice = token.usdValue ?: 1.0
+            val currentPrice = token.tokenAmount.uiAmount ?: 1.0
             history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
@@ -417,7 +417,7 @@ class MomentumTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            history.add(token.usdValue ?: 1.0)
+            history.add(token.tokenAmount.uiAmount ?: 1.0)
             if (history.size > 50) history.removeAt(0)
 
             if (history.size > cfg.rocPeriod) {
@@ -468,7 +468,7 @@ class TechnicalAnalysisCombinedStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            val currentPrice = token.usdValue ?: 1.0
+            val currentPrice = token.tokenAmount.uiAmount ?: 1.0
             history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 

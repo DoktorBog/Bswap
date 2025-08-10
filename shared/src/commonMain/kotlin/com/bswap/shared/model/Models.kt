@@ -52,7 +52,6 @@ data class ApiError(
 
 @Serializable
 data class WalletHistoryRequest(
-    val publicKey: String,
     val limit: Int = 50,
     val offset: Int = 0
 )

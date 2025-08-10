@@ -22,8 +22,10 @@ import com.bswap.ui.UiButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import com.bswap.ui.seed.SeedInputField
+import com.bswap.app.WalletRefreshManager
 import com.bswap.data.seedStorage
 import com.bswap.shared.wallet.toBase58
+import com.bswap.shared.wallet.WalletConfig
 import com.bswap.ui.TrianglesBackground
 import com.bswap.ui.UiRadioButton
 import kotlinx.coroutines.launch
@@ -67,6 +69,11 @@ fun ImportWalletScreen(
                         val keypair = seedStorage().createWallet(words, coin = "SOLANA")
                         seedStorage().saveSeed(words)
                         seedStorage().savePublicKey(keypair.publicKey.toBase58())
+                        
+                        // Initialize WalletConfig for server API calls
+                        WalletConfig.initializeFromSeed(words)
+                        
+                        WalletRefreshManager.triggerRefresh()
                         backStack.replaceAll(NavKey.BotDashboard)
                     }
                 },

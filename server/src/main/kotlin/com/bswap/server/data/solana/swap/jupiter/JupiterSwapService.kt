@@ -45,23 +45,20 @@ class JupiterSwapService(
         quote: QuoteResponse,
         userPublicKey: String
     ): SwapResponse {
-        lateinit var text: String
-        val time = measureTimeMillis {
-            text = client.post("$jupiterApiUrl/swap") {
-                contentType(ContentType.Application.Json)
-                setBody(
-                    """
-                    {
-                        "quoteResponse": ${Json.encodeToString(QuoteResponse.serializer(), quote)},
-                        "userPublicKey": "$userPublicKey",
-                        "wrapAndUnwrapSol": true
-                    }
-                    """.trimIndent()
-                )
-            }.bodyAsText()
+        val response: HttpResponse = client.post("$jupiterApiUrl/swap") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                """
+                {
+                    "quoteResponse": ${Json.encodeToString(QuoteResponse.serializer(), quote)},
+                    "userPublicKey": "$userPublicKey",
+                    "wrapAndUnwrapSol": true
+                }
+                """.trimIndent()
+            )
         }
-        logger.debug("swap latency=${time}ms")
-        return json.decodeFromString(SwapResponse.serializer(), text)
+        println("response ${response.bodyAsText()}")
+        return json.decodeFromString(SwapResponse.serializer(), response.bodyAsText())
     }
 
     suspend fun getQuoteAndPerformSwap(
@@ -70,7 +67,9 @@ class JupiterSwapService(
         outputMint: String,
         userPublicKey: String,
     ): SwapResponse {
-        val quote = getQuote(inputMint, outputMint, amount.toLong())
+        // Convert decimal amount to lamports (1 SOL = 1_000_000_000 lamports)
+        val amountInLamports = (amount.toDouble() * 1_000_000_000).toLong()
+        val quote = getQuote(inputMint, outputMint, amountInLamports)
         return performSwap(quote, userPublicKey)
     }
 }

@@ -3,7 +3,8 @@ package com.bswap.app
 private val port = ":9090"
 val baseUrl = "http://${
     when (getPlatform().name) {
-        "android" -> "192.168.0.152"
+        // Android emulator default route to host machine
+        "android" -> "10.0.2.2"
         else -> "localhost"
     }
 }$port"
