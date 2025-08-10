@@ -57,8 +57,20 @@ fun main() {
     val dexScreenerClient = DexScreenerClientImpl(client)
     val priceService = PriceService(client, dexScreenerClient)
     val serverWalletService = ServerWalletService(tokenValidator, solanaRpcClient, priceService)
-    val botManagementService = BotManagementService(serverWalletService)
+    val botManagementService = BotManagementService(serverWalletService, priceService)
     val commandProcessor = com.bswap.server.command.CommandProcessor(botManagementService, serverWalletService, priceService)
+
+    // Pre-populate wallet cache immediately after wallet initialization
+    println("Pre-populating wallet cache for immediate availability...")
+    appScope.launch {
+        try {
+            val request = com.bswap.shared.model.WalletHistoryRequest(limit = 50, offset = 0)
+            serverWalletService.getBotWalletHistory(request, silent = false)
+            println("✅ Wallet cache pre-population completed")
+        } catch (e: Exception) {
+            println("❌ Wallet cache pre-population failed: ${e.message}")
+        }
+    }
 
     // Start cache cleanup job
     appScope.launch {
@@ -81,7 +93,7 @@ fun main() {
             startRoute()
             tokensRoute(dexScreenerRepository.tokenProfilesFlow)
             apiRoute(dexScreenerRepository.tokenProfilesFlow)
-            walletRoutes(serverWalletService)
+            walletRoutes(serverWalletService, tokenMetadataService, priceService)
             botRoutes(botManagementService)
             commandRoutes(commandProcessor)
         }

@@ -69,12 +69,12 @@ class TransactionCache(
                 logger.info("⚡ TransactionCache: Fetching in progress, waiting for first results...")
             }
             
-            // Wait max 5 seconds for some results - RPC is working so we should get data
+            // Wait max 10 seconds for some results - RPC is working so we should get data
             val startTime = System.currentTimeMillis()
             while (walletCache.transactions.isEmpty() && 
                    walletCache.fetchJob?.isActive == true && 
-                   System.currentTimeMillis() - startTime < 5000) {
-                delay(200) // Check every 200ms
+                   System.currentTimeMillis() - startTime < 10000) {
+                delay(500) // Check every 500ms
             }
             
             if (walletCache.transactions.isNotEmpty()) {
@@ -86,21 +86,41 @@ class TransactionCache(
                 return HistoryPage(firstPage, if (hasMore) "page_1" else null)
             } else {
                 if (!silent && enableLogging) {
-                    logger.warn("⚡ TransactionCache: Still no results after 5 seconds, returning empty with cursor")
+                    logger.warn("⚡ TransactionCache: Still no results after 10 seconds, returning empty with cursor")
                 }
             }
         }
         
-        // No cache, no ongoing fetch - start background fetching and return empty page
+        // No cache, no ongoing fetch - start background fetching and wait for initial results
         if (!silent && enableLogging) {
-            logger.info("⚡ TransactionCache: No cache available, starting background fetch, returning empty page INSTANTLY")
+            logger.info("⚡ TransactionCache: No cache available, starting background fetch and waiting for initial results")
         }
         
         if (walletCache.fetchJob?.isActive != true) {
             startBackgroundFetching(publicKey, silent)
+            
+            // Wait for the initial fetch to complete (up to 15 seconds)
+            val startTime = System.currentTimeMillis()
+            while (walletCache.transactions.isEmpty() && 
+                   walletCache.fetchJob?.isActive == true && 
+                   System.currentTimeMillis() - startTime < 15000) {
+                delay(500) // Check every 500ms
+            }
+            
+            if (walletCache.transactions.isNotEmpty()) {
+                if (!silent && enableLogging) {
+                    logger.info("⚡ TransactionCache: Initial fetch completed with ${walletCache.transactions.size} transactions")
+                }
+                val firstPage = walletCache.transactions.take(FIRST_PAGE_SIZE)
+                val hasMore = walletCache.transactions.size > FIRST_PAGE_SIZE || !walletCache.isFullyFetched
+                return HistoryPage(firstPage, if (hasMore) "page_1" else null)
+            }
         }
         
-        // Return empty page with cursor to indicate more data is coming
+        // Fallback: return empty page with cursor to indicate more data might be coming
+        if (!silent && enableLogging) {
+            logger.warn("⚡ TransactionCache: No transactions found after waiting, returning empty page")
+        }
         return HistoryPage(emptyList(), "page_1")
     }
     

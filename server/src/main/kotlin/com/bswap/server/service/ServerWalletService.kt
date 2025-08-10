@@ -20,6 +20,11 @@ class ServerWalletService(
     private val logger = LoggerFactory.getLogger(ServerWalletService::class.java)
     private val wallets = ConcurrentHashMap<String, WalletData>()
     private val activeWallet = mutableMapOf<String, String>() // botId -> publicKey
+    
+    // Balance caching to reduce frequent RPC calls
+    private val balanceCache = ConcurrentHashMap<String, WalletBalance>()
+    private val balanceCacheTime = ConcurrentHashMap<String, Long>()
+    private val balanceCacheTtl = 10_000L // 10 seconds cache for balance
 
     private data class WalletData(
         val publicKey: String,
@@ -126,6 +131,20 @@ class ServerWalletService(
 
     suspend fun getWalletBalance(publicKey: String): ApiResponse<WalletBalance> = withContext(Dispatchers.IO) {
         try {
+            val now = System.currentTimeMillis()
+            
+            // Check cache first
+            val cachedBalance = balanceCache[publicKey]
+            val cacheTime = balanceCacheTime[publicKey] ?: 0
+            
+            if (cachedBalance != null && (now - cacheTime) < balanceCacheTtl) {
+                return@withContext ApiResponse(
+                    success = true,
+                    data = cachedBalance,
+                    message = "Balance retrieved from cache"
+                )
+            }
+            
             // Get real SOL balance
             val solBalance = try {
                 solanaRpcClient.getBalance(publicKey).toDouble() / 1_000_000_000.0
@@ -172,6 +191,10 @@ class ServerWalletService(
             )
 
             wallets[publicKey]?.lastUsed = System.currentTimeMillis()
+            
+            // Cache the balance for future requests
+            balanceCache[publicKey] = balance
+            balanceCacheTime[publicKey] = now
 
             ApiResponse(
                 success = true,
@@ -250,6 +273,46 @@ class ServerWalletService(
             "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE" -> "Orca"
             "So11111111111111111111111111111111111111112" -> "Solana"
             else -> "Unknown Token"
+        }
+    }
+
+    suspend fun isWalletReady(): WalletReadyResponse = withContext(Dispatchers.IO) {
+        try {
+            val botPublicKey = getBotWalletPublicKey()
+            if (botPublicKey.isEmpty()) {
+                return@withContext WalletReadyResponse(
+                    success = false,
+                    message = "Wallet not configured",
+                    ready = false,
+                    reason = "No bot wallet configured"
+                )
+            }
+            
+            val cacheStats = transactionCache.getCacheStats(botPublicKey)
+            val isBackgroundFetching = cacheStats["isBackgroundFetching"] as? Boolean ?: false
+            val transactionCount = cacheStats["transactionCount"] as? Int ?: 0
+            val isFullyFetched = cacheStats["isFullyFetched"] as? Boolean ?: false
+            
+            val ready = transactionCount > 0 || isFullyFetched
+            
+            return@withContext WalletReadyResponse(
+                success = true,
+                message = if (ready) "Wallet is ready" else "Wallet is initializing",
+                ready = ready,
+                walletPublicKey = botPublicKey,
+                transactionCount = transactionCount,
+                isBackgroundFetching = isBackgroundFetching,
+                isFullyFetched = isFullyFetched,
+                reason = if (ready) "Wallet is ready" else "Cache still loading"
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to check wallet readiness", e)
+            WalletReadyResponse(
+                success = false,
+                message = "Error checking wallet readiness: ${e.message}",
+                ready = false,
+                reason = "Error checking readiness: ${e.message}"
+            )
         }
     }
 
@@ -554,6 +617,21 @@ class ServerWalletService(
         logger.info("🧹 ServerWalletService: Running cache cleanup")
         transactionCache.cleanupExpiredCache()
         priceService?.cleanupCache()
+        
+        // Clean up expired balance cache entries
+        val now = System.currentTimeMillis()
+        val expiredKeys = balanceCacheTime.entries.filter { (_, time) ->
+            (now - time) > balanceCacheTtl
+        }.map { it.key }
+        
+        expiredKeys.forEach { key ->
+            balanceCache.remove(key)
+            balanceCacheTime.remove(key)
+        }
+        
+        if (expiredKeys.isNotEmpty()) {
+            logger.info("🧹 ServerWalletService: Cleaned up ${expiredKeys.size} expired balance cache entries")
+        }
     }
     
     /**

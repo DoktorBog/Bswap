@@ -178,3 +178,15 @@ data class ApiResponse<T>(
     val data: T? = null,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+@Serializable
+data class WalletReadyResponse(
+    val success: Boolean,
+    val message: String,
+    val ready: Boolean,
+    val walletPublicKey: String? = null,
+    val transactionCount: Int = 0,
+    val isBackgroundFetching: Boolean = false,
+    val isFullyFetched: Boolean = false,
+    val reason: String? = null
+)

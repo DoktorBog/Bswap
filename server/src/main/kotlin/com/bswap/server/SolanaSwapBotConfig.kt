@@ -12,7 +12,7 @@ data class SolanaSwapBotConfig(
     val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
     val solAmountToTrade: BigDecimal = BigDecimal("0.001"),
     val autoSellAllSpl: Boolean = true,
-    val sellAllSplIntervalMs: Long = 60_000,
+    val sellAllSplIntervalMs: Long = 60_000 * 10,
     val closeAccountsIntervalMs: Long = 60_000,
     val zeroBalanceCloseBatch: Int = 10,
     val splSellBatch: Int = 3,
@@ -21,7 +21,8 @@ data class SolanaSwapBotConfig(
     val validationMaxRisk: Double = 0.7,
     val maxKnownTokens: Int = 1000,
     val strategySettings: TradingStrategySettings = TradingStrategySettings(),
-    val strategyTickMs: Long = 1_000
+    val strategyTickMs: Long = 1_000,
+    val blockBuy: Boolean = false,
 )
 
 sealed interface TokenState {
@@ -41,7 +42,6 @@ data class TokenStatus(
 enum class StrategyType {
     IMMEDIATE,
     DELAYED_ENTRY,
-    RISK_AWARE,
     BATCH_ACCUMULATE,
     PUMPFUN_PRIORITY,
     SMA_CROSS,
@@ -61,12 +61,6 @@ data class DelayedEntryConfig(
     val minHoldMs: Long = 60_000
 )
 
-data class RiskAwareConfig(
-    val maxRisk: Double = 0.7,
-    val baseDelayMs: Long = 5_000,
-    val perRiskDelayMs: Long = 10_000,
-    val minHoldMs: Long = 90_000
-)
 
 data class BatchAccumulateConfig(
     val batchSize: Int = 5,
@@ -132,10 +126,9 @@ data class TechnicalAnalysisConfig(
 )
 
 data class TradingStrategySettings(
-    val type: StrategyType = StrategyType.RISK_AWARE,
+    val type: StrategyType = StrategyType.PUMPFUN_PRIORITY,
     val immediate: ImmediateConfig = ImmediateConfig(),
     val delayed: DelayedEntryConfig = DelayedEntryConfig(),
-    val riskAware: RiskAwareConfig = RiskAwareConfig(),
     val batch: BatchAccumulateConfig = BatchAccumulateConfig(),
     val pumpFun: PumpFunPriorityConfig = PumpFunPriorityConfig(),
     val smaCross: SmaCrossConfig = SmaCrossConfig(),
@@ -170,6 +163,7 @@ interface TradingRuntime {
     suspend fun sell(mint: String): Boolean
     suspend fun tokenInfo(mint: String): TokenInfo?
     suspend fun allTokens(): List<TokenInfo>
+    suspend fun getTokenUsdPrice(mint: String): Double?
 }
 
 var privateKey: String = ""

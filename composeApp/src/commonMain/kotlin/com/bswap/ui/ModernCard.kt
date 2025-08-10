@@ -79,7 +79,8 @@ fun StatCard(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    isLoading: Boolean = false
 ) {
     ModernCard(
         modifier = modifier.fillMaxWidth(),
@@ -96,11 +97,28 @@ fun StatCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = contentColor.copy(alpha = 0.7f)
             )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                color = contentColor
-            )
+            
+            if (isLoading) {
+                // Show loading state with shimmer effect
+                Text(
+                    text = "Loading...",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = contentColor.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(0.7f),
+                    trackColor = contentColor.copy(alpha = 0.3f),
+                    color = contentColor
+                )
+            } else {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = contentColor
+                )
+            }
+            
             subtitle?.let {
                 Text(
                     text = it,

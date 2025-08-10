@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
 
 private val logger = LoggerFactory.getLogger("WalletRoutes")
 
-fun Route.walletRoutes(walletService: ServerWalletService) {
+fun Route.walletRoutes(walletService: ServerWalletService, tokenMetadataService: com.bswap.server.service.TokenMetadataService, priceService: com.bswap.server.service.PriceService) {
     
     route("/wallet") {
         
@@ -66,6 +66,32 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
             }
         }
         
+        // Check if wallet is ready (cache populated and operational)
+        get("/ready") {
+            try {
+                logger.info("Checking wallet readiness")
+                
+                val response = walletService.isWalletReady()
+                
+                if (response.success) {
+                    call.respond(HttpStatusCode.OK, response)
+                } else {
+                    call.respond(HttpStatusCode.ServiceUnavailable, response)
+                }
+            } catch (e: Exception) {
+                logger.error("Error checking wallet readiness", e)
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    WalletReadyResponse(
+                        success = false,
+                        message = "Internal server error: ${e.message}",
+                        ready = false,
+                        reason = "Server error"
+                    )
+                )
+            }
+        }
+
         // Get wallet balance - for configured bot wallet
         get("/balance") {
             try {
@@ -126,14 +152,42 @@ fun Route.walletRoutes(walletService: ServerWalletService) {
                 if (response.success && response.data != null) {
                     logger.info("🔍 DETAILED: WalletRoutes - service data has ${response.data.transactions.size} transactions")
                     
-                    // Convert server response to client expected format
+                    // Convert server response to client expected format with proper SPL token metadata
                     val historyPage = com.bswap.shared.model.HistoryPage(
                         transactions = response.data.transactions.map { tx ->
+                            val isSpl = tx.token != "So11111111111111111111111111111111111111112" // SOL mint address
+                            
+                            val tokenMetadata = if (isSpl) {
+                                try {
+                                    tokenMetadataService.getTokenMetadata(tx.token)
+                                } catch (e: Exception) {
+                                    logger.warn("Failed to fetch token metadata for ${tx.token}: ${e.message}")
+                                    null
+                                }
+                            } else null
+                            
+                            // Calculate USD value for the transaction
+                            val usdValue = try {
+                                val tokenPrice = priceService.getTokenPrice(tx.token)
+                                if (tokenPrice != null) {
+                                    tx.amount * tokenPrice.priceUsd
+                                } else null
+                            } catch (e: Exception) {
+                                logger.debug("Failed to fetch price for ${tx.token}: ${e.message}")
+                                null
+                            }
+                            
                             com.bswap.shared.model.SolanaTx(
                                 signature = tx.signature,
                                 address = tx.publicKey,
                                 amount = tx.amount,
-                                incoming = tx.type == TransactionType.RECEIVE || tx.type == TransactionType.BUY
+                                incoming = tx.type == TransactionType.RECEIVE || tx.type == TransactionType.BUY,
+                                asset = if (isSpl) com.bswap.shared.model.SolanaTx.Asset.SPL else com.bswap.shared.model.SolanaTx.Asset.SOL,
+                                mint = if (isSpl) tx.token else null,
+                                tokenName = tokenMetadata?.name,
+                                tokenSymbol = tokenMetadata?.symbol,
+                                tokenLogo = tokenMetadata?.logoUri,
+                                usdValue = usdValue
                             )
                         },
                         nextCursor = if (response.data.hasMore) "next_page" else null

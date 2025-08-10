@@ -13,7 +13,8 @@ data class SolanaTx(
     val decimals: Int? = null,
     val tokenName: String? = null,
     val tokenSymbol: String? = null,
-    val tokenLogo: String? = null
+    val tokenLogo: String? = null,
+    val usdValue: Double? = null
 ) {
     enum class Asset { SOL, SPL }
 }

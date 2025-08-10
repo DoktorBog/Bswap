@@ -18,7 +18,8 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.random.Random
 
 class BotManagementService(
-    private val serverWalletService: ServerWalletService? = null
+    private val serverWalletService: ServerWalletService? = null,
+    private val priceService: com.bswap.server.service.PriceService? = null
 ) {
     private val logger = LoggerFactory.getLogger(BotManagementService::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -32,7 +33,7 @@ class BotManagementService(
 
     private var _walletConfig = WalletConfig.current()
     private var _config = SolanaSwapBotConfig()
-    var bot: SolanaTokenSwapBot = SolanaTokenSwapBot(_walletConfig, _config)
+    var bot: SolanaTokenSwapBot = SolanaTokenSwapBot(_walletConfig, _config, priceService = priceService)
     private var _tradingParameters = TradingParameters()
     private var _riskSettings = RiskSettings()
     private var _positions = mutableListOf<BotPosition>()
@@ -115,7 +116,7 @@ class BotManagementService(
 
             // Update wallet config reference and recreate bot with updated configurations
             _walletConfig = WalletConfig.current()
-            bot = SolanaTokenSwapBot(_walletConfig, _config)
+            bot = SolanaTokenSwapBot(_walletConfig, _config, priceService = priceService)
 
             if (wasRunning) {
                 startBot()

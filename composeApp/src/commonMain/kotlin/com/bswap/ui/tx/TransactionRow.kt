@@ -217,10 +217,10 @@ fun TransactionRow(tx: SolanaTx, modifier: Modifier = Modifier) {
                     )
                 }
                 
-                // USD estimate only for SOL transactions
-                if (tx.asset == SolanaTx.Asset.SOL) {
+                // USD estimate for both SOL and SPL transactions
+                tx.usdValue?.let { usdValue ->
                     Text(
-                        text = "${if (tx.incoming) "+" else "-"}$${String.format("%.2f", tx.amount * 200)}", // Mock SOL price
+                        text = "${if (tx.incoming) "+" else "-"}$${String.format("%.2f", usdValue)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -237,7 +237,7 @@ private fun TransactionRowPreview() {
         Column {
             // SOL transaction
             TransactionRow(
-                tx = SolanaTx("abcdef", "DestinationAddress", 1.23, incoming = true)
+                tx = SolanaTx("abcdef", "DestinationAddress", 1.23, incoming = true, usdValue = 246.0)
             )
             
             // SPL token transaction
@@ -251,7 +251,8 @@ private fun TransactionRowPreview() {
                     mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
                     tokenName = "USD Coin",
                     tokenSymbol = "USDC",
-                    tokenLogo = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png"
+                    tokenLogo = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+                    usdValue = 1000.0
                 )
             )
         }

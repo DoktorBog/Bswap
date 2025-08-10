@@ -61,7 +61,7 @@ class WalletService(
 
     suspend fun swap(request: SwapRequest): Result<SwapTx> = try {
         val response = jupiter.getQuoteAndPerformSwap(
-            request.amount,
+            request.amount.toDouble(),
             request.inputMint,
             request.outputMint,
             request.owner
@@ -82,7 +82,7 @@ class WalletService(
     suspend fun swapBatch(requests: List<SwapRequest>): Result<List<SwapTx>> = try {
         val results = requests.mapNotNull { req ->
             val resp = jupiter.getQuoteAndPerformSwap(
-                req.amount,
+                req.amount.toDouble(),
                 req.inputMint,
                 req.outputMint,
                 req.owner

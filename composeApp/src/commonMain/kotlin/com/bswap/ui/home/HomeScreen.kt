@@ -19,7 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.filled.Token
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +60,8 @@ data class Asset(
 data class HomeUiState(
     val portfolio: String = "$0",
     val assets: List<Asset> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null
 )
 
 class HomeViewModel(
@@ -72,14 +74,58 @@ class HomeViewModel(
     init {
         viewModelScope.launch {
             refresh()
+            startPeriodicUpdates()
+        }
+    }
+    
+    private fun startPeriodicUpdates() = viewModelScope.launch {
+        while (true) {
+            kotlinx.coroutines.delay(30_000) // Update every 30 seconds
+            updateBalanceSilently()
+        }
+    }
+    
+    private suspend fun updateBalanceSilently() {
+        try {
+            val info = api.walletInfo(address)
+            val assets = info.tokens.map { Asset(it.symbol ?: it.mint, it.amount ?: "0") }
+            val currentState = _uiState.value
+            
+            // Update data without showing loading state
+            _uiState.value = currentState.copy(
+                portfolio = "${'$'}${info.lamports / 1_000_000_000.0}",
+                assets = assets,
+                error = null
+            )
+        } catch (e: Exception) {
+            // Silently fail - don't disrupt user experience with background update errors
+            println("Background balance update failed: ${e.message}")
         }
     }
 
     fun refresh() = viewModelScope.launch {
+        // Preserve current data and show loading
+        val currentState = _uiState.value
+        _uiState.value = currentState.copy(isLoading = true, error = null)
+        
+        // Clear API cache to get fresh data
+        api.clearCache()
+        
         runCatching { api.walletInfo(address) }
             .onSuccess { info ->
                 val assets = info.tokens.map { Asset(it.symbol ?: it.mint, it.amount ?: "0") }
-                _uiState.value = HomeUiState(portfolio = "${'$'}${info.lamports / 1_000_000_000.0}", assets = assets)
+                _uiState.value = HomeUiState(
+                    portfolio = "${'$'}${info.lamports / 1_000_000_000.0}", 
+                    assets = assets,
+                    isLoading = false,
+                    error = null
+                )
+            }
+            .onFailure { error ->
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    error = error.message
+                )
             }
     }
 }
@@ -144,8 +190,8 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit,
                     NavigationBarItem(
                         selected = false,
                         onClick = {},
-                        icon = { Icon(Icons.Default.Wallet, contentDescription = Strings.wallet) },
-                        label = { Text(Strings.wallet) },
+                        icon = { Icon(Icons.Default.Token, contentDescription = "SPL Tokens") },
+                        label = { Text("SPL") },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -173,7 +219,8 @@ fun HomeScreen(publicKey: String, onSettings: () -> Unit, onHistory: () -> Unit,
                     value = state.portfolio,
                     subtitle = "Total balance",
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    isLoading = state.isLoading
                 )
                 
                 Spacer(modifier = Modifier.height(20.dp))

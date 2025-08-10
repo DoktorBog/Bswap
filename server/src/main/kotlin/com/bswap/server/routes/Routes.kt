@@ -13,39 +13,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 
-fun Route.walletRoutes(service: WalletService) {
-    get("/wallet/{address}/balance") {
-        val address = call.parameters["address"] ?: return@get call.respond(
-            HttpStatusCode.BadRequest,
-            ApiError("missing address")
-        )
-        val result = service.getBalance(address)
-        result.onSuccess { call.respond(it) }
-            .onFailure { call.respond(HttpStatusCode.InternalServerError, ApiError(it.message ?: "error")) }
-    }
-
-    get("/wallet/{address}/tokens") {
-        val address = call.parameters["address"] ?: return@get call.respond(
-            HttpStatusCode.BadRequest,
-            ApiError("missing address")
-        )
-        val result = service.getTokens(address)
-        result.onSuccess { call.respond(it) }
-            .onFailure { call.respond(HttpStatusCode.InternalServerError, ApiError(it.message ?: "error")) }
-    }
-
-    get("/wallet/{address}/history") {
-        val address = call.parameters["address"] ?: return@get call.respond(
-            HttpStatusCode.BadRequest,
-            ApiError("missing address")
-        )
-        val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
-        val cursor = call.request.queryParameters["cursor"]
-        val result = service.getHistory(address, limit, cursor)
-        result.onSuccess { call.respond(it) }
-            .onFailure { call.respond(HttpStatusCode.InternalServerError, ApiError(it.message ?: "error")) }
-    }
-
+fun Route.legacyWalletRoutes(service: WalletService) {
     get("/tokens/search") {
         val q = call.request.queryParameters["q"] ?: return@get call.respond(
             HttpStatusCode.BadRequest,

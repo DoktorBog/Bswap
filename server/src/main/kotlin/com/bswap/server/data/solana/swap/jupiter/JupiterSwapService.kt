@@ -72,4 +72,15 @@ class JupiterSwapService(
         val quote = getQuote(inputMint, outputMint, amountInLamports)
         return performSwap(quote, userPublicKey)
     }
+
+    suspend fun getQuoteAndPerformSwap(
+        amount: Double,
+        inputMint: String,
+        outputMint: String,
+        userPublicKey: String,
+    ): SwapResponse {
+        val amountInLamports = amount.toLong()
+        val quote = getQuote(inputMint, outputMint, amountInLamports)
+        return performSwap(quote, userPublicKey)
+    }
 }

@@ -78,6 +78,7 @@ kotlin {
             implementation(libs.coil.mp)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
+            implementation(project(":shared"))
         }
 
         commonTest.dependencies {

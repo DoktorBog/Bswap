@@ -1,27 +1,29 @@
 package com.bswap.server.stratagy
 
+import com.bswap.addon.bollinger
+import com.bswap.addon.donchianHigh
+import com.bswap.addon.donchianLow
+import com.bswap.addon.roc
+import com.bswap.addon.rsi
+import com.bswap.addon.sma
 import com.bswap.server.BatchAccumulateConfig
+import com.bswap.server.BollingerMeanReversionConfig
+import com.bswap.server.BreakoutConfig
 import com.bswap.server.DelayedEntryConfig
 import com.bswap.server.ImmediateConfig
+import com.bswap.server.MomentumConfig
 import com.bswap.server.PumpFunPriorityConfig
-import com.bswap.server.RiskAwareConfig
+import com.bswap.server.RsiBasedConfig
+import com.bswap.server.SmaCrossConfig
 import com.bswap.server.StrategyType
+import com.bswap.server.TechnicalAnalysisConfig
 import com.bswap.server.TokenMeta
 import com.bswap.server.TokenSource
 import com.bswap.server.TokenState
 import com.bswap.server.TradingRuntime
 import com.bswap.server.TradingStrategySettings
-import com.bswap.server.SmaCrossConfig
-import com.bswap.server.RsiBasedConfig
-import com.bswap.server.BreakoutConfig
-import com.bswap.server.BollingerMeanReversionConfig
-import com.bswap.server.MomentumConfig
-import com.bswap.server.TechnicalAnalysisConfig
-import com.bswap.server.validation.TokenValidator
-import com.bswap.addon.*
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicLong
@@ -33,11 +35,10 @@ interface TradingStrategy {
 }
 
 object TradingStrategyFactory {
-    fun create(settings: TradingStrategySettings, tokenValidator: TokenValidator): TradingStrategy {
+    fun create(settings: TradingStrategySettings): TradingStrategy {
         return when (settings.type) {
             StrategyType.IMMEDIATE -> ImmediateBuyTimedSellStrategy(settings.immediate)
             StrategyType.DELAYED_ENTRY -> DelayedEntryQuickExitStrategy(settings.delayed)
-            StrategyType.RISK_AWARE -> RiskAwareEntryTimedExitStrategy(settings.riskAware, tokenValidator)
             StrategyType.BATCH_ACCUMULATE -> BatchAccumulateStrategy(settings.batch)
             StrategyType.PUMPFUN_PRIORITY -> PumpFunPriorityStrategy(settings.pumpFun)
             StrategyType.SMA_CROSS -> SmaCrossBasedStrategy(settings.smaCross)
@@ -48,7 +49,10 @@ object TradingStrategyFactory {
             StrategyType.TECHNICAL_ANALYSIS_COMBINED -> TechnicalAnalysisCombinedStrategy(settings.technicalAnalysis)
         }
     }
+
+    fun getAllStrategyTypes(): List<StrategyType> = StrategyType.entries.toList()
 }
+
 
 class ImmediateBuyTimedSellStrategy(
     private val cfg: ImmediateConfig
@@ -97,37 +101,6 @@ class DelayedEntryQuickExitStrategy(
     }
 }
 
-class RiskAwareEntryTimedExitStrategy(
-    private val cfg: RiskAwareConfig,
-    private val validator: TokenValidator
-) : TradingStrategy {
-    override val type: StrategyType = StrategyType.RISK_AWARE
-    private val plannedBuys = ConcurrentHashMap<String, Long>()
-    private val plannedSells = ConcurrentHashMap<String, Long>()
-    override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
-        if (!runtime.isNew(meta.mint)) return
-        val res = withContext(Dispatchers.IO) { validator.validateToken(meta.mint) }
-        if (!res.isValid) return
-        if (res.riskScore > cfg.maxRisk) return
-        val delayMs = cfg.baseDelayMs + (res.riskScore * cfg.perRiskDelayMs).toLong()
-        plannedBuys.putIfAbsent(meta.mint, runtime.now() + delayMs)
-    }
-    override suspend fun onTick(runtime: TradingRuntime) {
-        val now = runtime.now()
-        plannedBuys.entries.filter { it.value <= now }.forEach { e ->
-            if (runtime.isNew(e.key)) {
-                val bought = runtime.buy(e.key)
-                if (bought) plannedSells[e.key] = now + cfg.minHoldMs
-            }
-            plannedBuys.remove(e.key)
-        }
-        plannedSells.entries.filter { it.value <= now }.forEach { e ->
-            val st = runtime.status(e.key)
-            if (st?.state == TokenState.Swapped) runtime.sell(e.key)
-            plannedSells.remove(e.key)
-        }
-    }
-}
 
 class BatchAccumulateStrategy(
     private val cfg: BatchAccumulateConfig
@@ -172,7 +145,6 @@ class PumpFunPriorityStrategy(
     override val type: StrategyType = StrategyType.PUMPFUN_PRIORITY
     private val plannedSells = ConcurrentHashMap<String, Long>()
     override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
-        if (meta.source != TokenSource.PUMPFUN) return
         if (!runtime.isNew(meta.mint)) return
         val bought = runtime.buy(meta.mint)
         if (bought) plannedSells[meta.mint] = runtime.now() + cfg.minHoldMs
@@ -208,8 +180,9 @@ class SmaCrossBasedStrategy(
         // Update price history for all tokens
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            // Use current token UI amount as a proxy for price if usdValue is unavailable
-            history.add(token.tokenAmount.uiAmount ?: 1.0)
+            // Use USD-based pricing for more accurate technical analysis
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
+            history.add(currentPrice)
             // Keep only last 50 prices for performance
             if (history.size > 50) history.removeAt(0)
 
@@ -262,7 +235,8 @@ class RsiBasedTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            history.add(token.tokenAmount.uiAmount ?: 1.0)
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
+            history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
             if (history.size >= cfg.period + 1) {
@@ -312,7 +286,7 @@ class BreakoutTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            val currentPrice = token.tokenAmount.uiAmount ?: 1.0
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
             history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
@@ -366,7 +340,7 @@ class BollingerMeanReversionTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            val currentPrice = token.tokenAmount.uiAmount ?: 1.0
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
             history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
@@ -417,7 +391,8 @@ class MomentumTradingStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            history.add(token.tokenAmount.uiAmount ?: 1.0)
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
+            history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
             if (history.size > cfg.rocPeriod) {
@@ -468,7 +443,7 @@ class TechnicalAnalysisCombinedStrategy(
 
         runtime.allTokens().forEach { token ->
             val history = priceHistory.getOrPut(token.address) { mutableListOf() }
-            val currentPrice = token.tokenAmount.uiAmount ?: 1.0
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
             history.add(currentPrice)
             if (history.size > 50) history.removeAt(0)
 
@@ -583,5 +558,31 @@ class TechnicalAnalysisCombinedStrategy(
         }
 
         return CombinedSignals(buyScore, sellScore)
+    }
+}
+
+/**
+ * Helper function to calculate USD price for a token using real market data.
+ * This replaces the old token.tokenAmount.uiAmount ?: 1.0 approach
+ * with proper USD pricing from market APIs for accurate strategy decisions.
+ */
+private suspend fun calculateTokenUsdPrice(
+    token: com.bswap.server.data.solana.transaction.TokenInfo,
+    runtime: TradingRuntime
+): Double {
+    // First, try to get the real USD price from the market
+    val usdPrice = runtime.getTokenUsdPrice(token.address)
+
+    return when {
+        // If we have a real USD price from the market, use it
+        usdPrice != null && usdPrice > 0.0 -> usdPrice
+
+        // Fallback to token UI amount for tokens without market data
+        // This is better than using amount in lamports/smallest units
+        token.tokenAmount.uiAmount != null && token.tokenAmount.uiAmount > 0.0 ->
+            token.tokenAmount.uiAmount
+
+        // Final fallback to ensure algorithms never divide by zero
+        else -> 0.000001
     }
 }

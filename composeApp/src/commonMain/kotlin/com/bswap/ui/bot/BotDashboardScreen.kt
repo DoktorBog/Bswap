@@ -48,7 +48,6 @@ import com.bswap.app.api.WalletApi
 import com.bswap.app.api.WalletBalance
 import com.bswap.models.BotStatus
 import com.bswap.models.TradingStatistics
-import com.bswap.shared.wallet.WalletConfig
 import com.bswap.ui.ActionCard
 import com.bswap.ui.DangerButton
 import com.bswap.ui.GlowCard
@@ -95,7 +94,7 @@ fun BotDashboardScreen(
             scope.launch {
                 try {
                     println("BotDashboard: Fetching bot status and wallet balance...")
-                    
+
                     // Fetch bot status
                     val botResponse = BotApi.getBotStatus()
                     println("BotDashboard: Bot response received - success: ${botResponse.success}")
@@ -107,7 +106,7 @@ fun BotDashboardScreen(
                         error = botResponse.message
                         println("BotDashboard: API error: ${botResponse.message}")
                     }
-                    
+
                     // Fetch wallet balance
                     try {
                         val walletApi = WalletApi(com.bswap.app.networkClient())
@@ -120,7 +119,7 @@ fun BotDashboardScreen(
                         println("BotDashboard: Failed to fetch wallet balance: ${e.message}")
                         // Don't set error for wallet balance failure, just log it
                     }
-                    
+
                 } catch (e: Exception) {
                     error = "Connection error: ${e.message}"
                     println("BotDashboard: Exception: ${e.message}")
@@ -213,9 +212,7 @@ fun BotDashboardScreen(
 
                     item {
                         // Wallet Balance Card
-                        if (walletBalance != null) {
-                            WalletBalanceCard(walletBalance!!)
-                        }
+                        WalletBalanceCard(walletBalance ?: WalletBalance())
                     }
 
                     item {
@@ -474,29 +471,8 @@ fun WalletBalanceCard(balance: WalletBalance) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
-                ModernCard(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.AccountBalanceWallet,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "ACTIVE",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                }
             }
-            
+
             if (balance.tokenBalances.isNotEmpty()) {
                 Text(
                     text = "Token Holdings: ${balance.tokenBalances.size} tokens",
