@@ -60,6 +60,8 @@
    ```bash
    ./gradlew :composeApp:wasmJsBrowserProductionRun
    ```
+<img width="358" height="682" alt="Screenshot 2025-08-11 at 01 29 34" src="https://github.com/user-attachments/assets/1a4c7cc6-7e19-4d8f-b0c2-520920198120" />
+
 
 ### Wallet API
 
