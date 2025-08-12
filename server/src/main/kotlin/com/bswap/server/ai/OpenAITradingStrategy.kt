@@ -46,13 +46,16 @@ class OpenAITradingStrategy(
     override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
         if (!runtime.isNew(meta.mint)) return
         
-        logger.info("Discovered new token: ${meta.mint}")
+        logger.info("🤖 AI Strategy: Discovered new token ${meta.mint} from ${meta.source} - performing autonomous validation")
         
         // Initialize price history
         priceHistory.putIfAbsent(meta.mint, mutableListOf())
         
         coroutineScope {
             try {
+                // AI strategy performs its own independent validation and analysis
+                logger.info("🤖 AI Strategy: Bypassing basic validation for ${meta.mint} - using AI-powered analysis")
+                
                 // Parallel validation and analysis
                 val validationJob = async { validateToken(meta.mint, runtime) }
                 val analysisJob = async { 
@@ -65,26 +68,33 @@ class OpenAITradingStrategy(
                 val analysis = analysisJob.await()
                 
                 if (!isValid) {
-                    logger.info("Token ${meta.mint} failed validation - skipping")
+                    logger.info("🤖 AI Strategy: Token ${meta.mint} failed AI validation - SKIPPING")
                     return@coroutineScope
                 }
                 
+                logger.info("🤖 AI Strategy: Token ${meta.mint} passed AI validation - proceeding with analysis")
+                
                 if (analysis?.shouldBuy == true && analysis.confidence > cfg.confidenceThreshold) {
+                    logger.info("🤖 AI Strategy: BUYING ${meta.mint} - Confidence: ${analysis.confidence * 100}%, Risk: ${analysis.riskAssessment}")
                     val bought = runtime.buy(meta.mint)
                     if (bought) {
                         val tokenInfo = runtime.tokenInfo(meta.mint)
                         if (tokenInfo != null) {
                             positions[meta.mint] = calculateTokenUsdPrice(tokenInfo, runtime)
                             plannedSells[meta.mint] = runtime.now() + cfg.minHoldMs
-                            logger.info("AI bought ${meta.mint} - Confidence: ${analysis.confidence}, Reason: ${analysis.reasoning}")
+                            logger.info("🤖 AI Strategy: Successfully bought ${meta.mint} - Reason: ${analysis.reasoning}")
                         }
+                    } else {
+                        logger.warn("🤖 AI Strategy: Failed to execute buy for ${meta.mint}")
                     }
+                } else if (analysis?.shouldSkip == true) {
+                    logger.info("🤖 AI Strategy: SKIPPING ${meta.mint} - Reason: ${analysis.reasoning}")
                 } else {
-                    logger.info("AI skipped ${meta.mint} - ${analysis?.reasoning ?: "Failed analysis"}")
+                    logger.info("🤖 AI Strategy: Insufficient confidence for ${meta.mint} - Confidence: ${(analysis?.confidence ?: 0.0) * 100}%")
                 }
                 
             } catch (e: Exception) {
-                logger.error("Error processing discovered token ${meta.mint}", e)
+                logger.error("🤖 AI Strategy: Error processing discovered token ${meta.mint}", e)
             }
         }
     }
@@ -217,12 +227,12 @@ class OpenAITradingStrategy(
                     
                     // Check stop loss and take profit first
                     if (pnlPct <= -cfg.stopLossPct) {
-                        sellPosition(tokenAddress, runtime, "Stop Loss: ${(pnlPct * 100).toInt()}%")
+                        sellPosition(tokenAddress, runtime, "🤖 AI Stop Loss: ${(pnlPct * 100).toInt()}%")
                         return@forEach
                     }
                     
                     if (pnlPct >= cfg.takeProfitPct) {
-                        sellPosition(tokenAddress, runtime, "Take Profit: ${(pnlPct * 100).toInt()}%")
+                        sellPosition(tokenAddress, runtime, "🤖 AI Take Profit: ${(pnlPct * 100).toInt()}%")
                         return@forEach
                     }
                     
@@ -231,16 +241,18 @@ class OpenAITradingStrategy(
                         val analysis = analyzeToken(tokenAddress, runtime)
                         if (analysis != null) {
                             if (analysis.shouldSell && analysis.confidence > cfg.confidenceThreshold) {
-                                sellPosition(tokenAddress, runtime, "AI Exit: ${analysis.reasoning}")
+                                sellPosition(tokenAddress, runtime, "🤖 AI Exit Signal: ${analysis.reasoning} (Confidence: ${(analysis.confidence * 100).toInt()}%)")
                                 return@forEach
                             }
                             
                             // Risk-based exit
                             if (analysis.riskAssessment.equals("HIGH", ignoreCase = true) && 
                                 analysis.confidence > 0.8) {
-                                sellPosition(tokenAddress, runtime, "High Risk Exit")
+                                sellPosition(tokenAddress, runtime, "🤖 AI High Risk Exit: ${analysis.riskAssessment}")
                                 return@forEach
                             }
+                            
+                            logger.debug("🤖 AI Strategy: Holding ${tokenAddress} - P&L: ${(pnlPct * 100).toInt()}%, AI Decision: ${if (analysis.shouldBuy) "HOLD/BUY" else if (analysis.shouldSell) "SELL" else "NEUTRAL"}")
                         }
                     } catch (e: Exception) {
                         logger.error("Error getting exit analysis for $tokenAddress", e)

@@ -120,17 +120,29 @@ class SolanaTokenSwapBot(
         flow.collect { list ->
             if (!_isActive.get()) return@collect
             list.filter { it.chainId == "solana" }.forEach { p ->
-                // Validate token before passing to strategy
-                val validationResult = withContext(Dispatchers.IO) {
-                    tokenValidator.validateToken(p.tokenAddress)
-                }
-                if (validationResult.isValid) {
+                // For AI strategies, bypass basic validation and let AI decide
+                val shouldValidate = strategy.type != StrategyType.AI_STRATEGY
+                
+                if (shouldValidate) {
+                    // Standard validation for non-AI strategies
+                    val validationResult = withContext(Dispatchers.IO) {
+                        tokenValidator.validateToken(p.tokenAddress)
+                    }
+                    if (validationResult.isValid) {
+                        strategy.onDiscovered(
+                            TokenMeta(p.tokenAddress, TokenSource.PROFILE, profile = p),
+                            this@SolanaTokenSwapBot
+                        )
+                    } else {
+                        logger.debug("PROFILE: Token validation failed for ${p.tokenAddress}: not valid")
+                    }
+                } else {
+                    // AI strategy handles its own validation
+                    logger.info("PROFILE: Passing ${p.tokenAddress} to AI strategy for autonomous validation")
                     strategy.onDiscovered(
                         TokenMeta(p.tokenAddress, TokenSource.PROFILE, profile = p),
                         this@SolanaTokenSwapBot
                     )
-                } else {
-                    logger.debug("PROFILE: Token validation failed for ${p.tokenAddress}: not valid")
                 }
             }
         }
@@ -139,14 +151,24 @@ class SolanaTokenSwapBot(
     fun observePumpFun(flow: Flow<TokenTradeResponse>) = scope.launch {
         flow.debounce(2000).collect { t ->
             if (!_isActive.get()) return@collect
-            // Validate token before passing to strategy
-            val validationResult = withContext(Dispatchers.IO) {
-                tokenValidator.validateToken(t.mint)
-            }
-            if (validationResult.isValid) {
-                strategy.onDiscovered(TokenMeta(t.mint, TokenSource.PUMPFUN, pump = t), this@SolanaTokenSwapBot)
+            
+            // For AI strategies, bypass basic validation and let AI decide
+            val shouldValidate = strategy.type != StrategyType.AI_STRATEGY
+            
+            if (shouldValidate) {
+                // Standard validation for non-AI strategies
+                val validationResult = withContext(Dispatchers.IO) {
+                    tokenValidator.validateToken(t.mint)
+                }
+                if (validationResult.isValid) {
+                    strategy.onDiscovered(TokenMeta(t.mint, TokenSource.PUMPFUN, pump = t), this@SolanaTokenSwapBot)
+                } else {
+                    logger.debug("PUMPFUN: Token validation failed for ${t.mint}: not valid")
+                }
             } else {
-                logger.debug("PUMPFUN: Token validation failed for ${t.mint}: not valid")
+                // AI strategy handles its own validation
+                logger.info("PUMPFUN: Passing ${t.mint} to AI strategy for autonomous validation")
+                strategy.onDiscovered(TokenMeta(t.mint, TokenSource.PUMPFUN, pump = t), this@SolanaTokenSwapBot)
             }
         }
     }
@@ -155,17 +177,29 @@ class SolanaTokenSwapBot(
         flow.sample(1_000).collect { list ->
             if (!_isActive.get()) return@collect
             list.filter { it.chainId == "solana" }.shuffled().take(5).forEach { b ->
-                // Validate token before passing to strategy
-                val validationResult = withContext(Dispatchers.IO) {
-                    tokenValidator.validateToken(b.tokenAddress)
-                }
-                if (validationResult.isValid) {
+                // For AI strategies, bypass basic validation and let AI decide
+                val shouldValidate = strategy.type != StrategyType.AI_STRATEGY
+                
+                if (shouldValidate) {
+                    // Standard validation for non-AI strategies
+                    val validationResult = withContext(Dispatchers.IO) {
+                        tokenValidator.validateToken(b.tokenAddress)
+                    }
+                    if (validationResult.isValid) {
+                        strategy.onDiscovered(
+                            TokenMeta(b.tokenAddress, TokenSource.BOOST, boost = b),
+                            this@SolanaTokenSwapBot
+                        )
+                    } else {
+                        logger.debug("BOOST: Token validation failed for ${b.tokenAddress}: not valid")
+                    }
+                } else {
+                    // AI strategy handles its own validation
+                    logger.info("BOOST: Passing ${b.tokenAddress} to AI strategy for autonomous validation")
                     strategy.onDiscovered(
                         TokenMeta(b.tokenAddress, TokenSource.BOOST, boost = b),
                         this@SolanaTokenSwapBot
                     )
-                } else {
-                    logger.debug("BOOST: Token validation failed for ${b.tokenAddress}: not valid")
                 }
             }
         }
