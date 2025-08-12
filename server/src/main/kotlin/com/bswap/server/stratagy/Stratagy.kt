@@ -22,6 +22,8 @@ import com.bswap.server.TokenSource
 import com.bswap.server.TokenState
 import com.bswap.server.TradingRuntime
 import com.bswap.server.TradingStrategySettings
+import com.bswap.server.ai.*
+import com.bswap.server.ConfigLoader
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -47,6 +49,14 @@ object TradingStrategyFactory {
             StrategyType.BOLLINGER_MEAN_REVERSION -> BollingerMeanReversionTradingStrategy(settings.bollingerMeanReversion)
             StrategyType.MOMENTUM -> MomentumTradingStrategy(settings.momentum)
             StrategyType.TECHNICAL_ANALYSIS_COMBINED -> TechnicalAnalysisCombinedStrategy(settings.technicalAnalysis)
+            StrategyType.AI_STRATEGY -> {
+                val openaiKey = ConfigLoader.loadOpenAIKey()
+                if (openaiKey != null) {
+                    OpenAITradingStrategy(settings.aiStrategy, openaiKey)
+                } else {
+                    AITradingStrategy(settings.aiStrategy)
+                }
+            }
         }
     }
 
@@ -566,6 +576,275 @@ class TechnicalAnalysisCombinedStrategy(
  * This replaces the old token.tokenAmount.uiAmount ?: 1.0 approach
  * with proper USD pricing from market APIs for accurate strategy decisions.
  */
+class AITradingStrategy(
+    private val cfg: com.bswap.server.AIStrategyConfig
+) : TradingStrategy {
+    override val type: StrategyType = StrategyType.AI_STRATEGY
+    private val logger = LoggerFactory.getLogger(AITradingStrategy::class.java)
+    
+    private val aiModel: AIModel = AIModelFactory.createModel(cfg)
+    private val plannedSells = ConcurrentHashMap<String, Long>()
+    private val positions = ConcurrentHashMap<String, Double>() // entry prices
+    private val priceHistory = ConcurrentHashMap<String, MutableList<Pair<Double, Long>>>()
+    private val trainingSamples = ConcurrentLinkedQueue<TrainingSample>()
+    private var lastRetrainTime = 0L
+    private var isModelTrained = false
+    
+    override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
+        if (!runtime.isNew(meta.mint)) return
+        
+        // Initialize price history tracking
+        priceHistory.putIfAbsent(meta.mint, mutableListOf())
+        
+        // If model is trained, make immediate prediction
+        if (isModelTrained) {
+            try {
+                val features = extractFeatures(meta.mint, runtime)
+                if (features != null) {
+                    val prediction = aiModel.predict(features)
+                    
+                    // Apply AI decision logic
+                    if (shouldBuy(prediction, features)) {
+                        val bought = runtime.buy(meta.mint)
+                        if (bought) {
+                            positions[meta.mint] = calculateTokenUsdPrice(
+                                runtime.tokenInfo(meta.mint) ?: return, runtime
+                            )
+                            plannedSells[meta.mint] = runtime.now() + cfg.minHoldMs
+                            logger.info("AI Strategy bought ${meta.mint} with confidence ${prediction.confidence}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                logger.error("Error in AI prediction for token ${meta.mint}", e)
+            }
+        }
+    }
+    
+    override suspend fun onTick(runtime: TradingRuntime) {
+        val now = runtime.now()
+        
+        try {
+            // Update price history and collect training data
+            updatePriceHistoryAndCollectData(runtime)
+            
+            // Retrain model periodically
+            if (now - lastRetrainTime > cfg.retrainIntervalMs && trainingSamples.size >= 100) {
+                retrain()
+            }
+            
+            // Process existing positions
+            processExistingPositions(runtime, now)
+            
+            // Make new trading decisions for all monitored tokens
+            makeNewTradingDecisions(runtime, now)
+            
+            // Handle timed sells
+            handleTimedSells(runtime, now)
+            
+        } catch (e: Exception) {
+            logger.error("Error in AI strategy tick", e)
+        }
+    }
+    
+    private suspend fun updatePriceHistoryAndCollectData(runtime: TradingRuntime) {
+        runtime.allTokens().forEach { token ->
+            val history = priceHistory.getOrPut(token.address) { mutableListOf() }
+            val currentPrice = calculateTokenUsdPrice(token, runtime)
+            val timestamp = System.currentTimeMillis()
+            
+            history.add(Pair(currentPrice, timestamp))
+            
+            // Keep only recent history
+            if (history.size > cfg.lookbackPeriod * 2) {
+                history.removeAt(0)
+            }
+            
+            // Collect training data from past decisions
+            if (history.size >= cfg.predictionHorizon + 1) {
+                val oldIndex = history.size - cfg.predictionHorizon - 1
+                val oldPrice = history[oldIndex].first
+                val actualReturn = (currentPrice - oldPrice) / oldPrice
+                
+                val features = extractFeaturesFromHistory(history.take(oldIndex + 1))
+                if (features != null && trainingSamples.size < cfg.maxTrainingSamples) {
+                    trainingSamples.offer(TrainingSample(features, actualReturn, timestamp))
+                } else if (trainingSamples.size >= cfg.maxTrainingSamples) {
+                    trainingSamples.poll() // Remove oldest
+                    if (features != null) {
+                        trainingSamples.offer(TrainingSample(features, actualReturn, timestamp))
+                    }
+                }
+            }
+        }
+    }
+    
+    private suspend fun processExistingPositions(runtime: TradingRuntime, now: Long) {
+        positions.keys.forEach { tokenAddress ->
+            val status = runtime.status(tokenAddress)
+            val entryPrice = positions[tokenAddress] ?: return@forEach
+            
+            if (status?.state == TokenState.Swapped) {
+                val currentPrice = runtime.tokenInfo(tokenAddress)?.let { 
+                    calculateTokenUsdPrice(it, runtime) 
+                } ?: return@forEach
+                
+                val pnlPct = (currentPrice - entryPrice) / entryPrice
+                
+                // AI-driven risk management
+                val features = extractFeatures(tokenAddress, runtime)
+                if (features != null) {
+                    val prediction = aiModel.predict(features)
+                    
+                    // Take profit
+                    if (pnlPct >= cfg.takeProfitPct) {
+                        sellPosition(tokenAddress, runtime, "AI Take Profit")
+                        return@forEach
+                    }
+                    
+                    // Stop loss
+                    if (pnlPct <= -cfg.stopLossPct) {
+                        sellPosition(tokenAddress, runtime, "AI Stop Loss")
+                        return@forEach
+                    }
+                    
+                    // AI-based exit signal
+                    if (prediction.sellProbability > prediction.buyProbability && 
+                        prediction.confidence > cfg.confidenceThreshold) {
+                        sellPosition(tokenAddress, runtime, "AI Exit Signal")
+                        return@forEach
+                    }
+                    
+                    // Risk-based exit
+                    if (prediction.riskScore > 0.8) {
+                        sellPosition(tokenAddress, runtime, "High Risk Exit")
+                        return@forEach
+                    }
+                }
+            }
+        }
+    }
+    
+    private suspend fun makeNewTradingDecisions(runtime: TradingRuntime, now: Long) {
+        if (!isModelTrained) return
+        
+        runtime.allTokens().forEach { token ->
+            val status = runtime.status(token.address)
+            if (status == null && runtime.isNew(token.address)) {
+                val features = extractFeatures(token.address, runtime)
+                if (features != null) {
+                    val prediction = aiModel.predict(features)
+                    
+                    if (shouldBuy(prediction, features)) {
+                        val bought = runtime.buy(token.address)
+                        if (bought) {
+                            positions[token.address] = calculateTokenUsdPrice(token, runtime)
+                            plannedSells[token.address] = now + cfg.minHoldMs
+                            logger.info("AI bought ${token.address}, confidence: ${prediction.confidence}")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    private suspend fun handleTimedSells(runtime: TradingRuntime, now: Long) {
+        plannedSells.entries.filter { it.value <= now }.forEach { entry ->
+            val status = runtime.status(entry.key)
+            if (status?.state == TokenState.Swapped) {
+                sellPosition(entry.key, runtime, "Timed Sell")
+            } else {
+                plannedSells.remove(entry.key)
+            }
+        }
+    }
+    
+    private suspend fun sellPosition(tokenAddress: String, runtime: TradingRuntime, reason: String) {
+        runtime.sell(tokenAddress)
+        positions.remove(tokenAddress)
+        plannedSells.remove(tokenAddress)
+        logger.info("AI sold $tokenAddress: $reason")
+    }
+    
+    private suspend fun retrain() {
+        try {
+            logger.info("Retraining AI model with ${trainingSamples.size} samples...")
+            val samples = trainingSamples.toList()
+            val success = aiModel.train(samples)
+            
+            if (success) {
+                isModelTrained = true
+                lastRetrainTime = System.currentTimeMillis()
+                logger.info("AI model retrained successfully. Accuracy: ${aiModel.getModelAccuracy() * 100:.2f}%")
+            } else {
+                logger.warn("AI model retraining failed")
+            }
+        } catch (e: Exception) {
+            logger.error("Error during model retraining", e)
+        }
+    }
+    
+    private fun shouldBuy(prediction: PredictionResult, features: MarketFeatures): Boolean {
+        if (!isModelTrained) return false
+        
+        return prediction.buyProbability > prediction.sellProbability &&
+               prediction.confidence > cfg.confidenceThreshold &&
+               prediction.expectedReturn > 0.02 && // Minimum expected return
+               prediction.riskScore < 0.7 && // Risk threshold
+               features.sentiment > 0.3 // Minimum sentiment
+    }
+    
+    private suspend fun extractFeatures(tokenAddress: String, runtime: TradingRuntime): MarketFeatures? {
+        val history = priceHistory[tokenAddress] ?: return null
+        return extractFeaturesFromHistory(history)
+    }
+    
+    private fun extractFeaturesFromHistory(history: List<Pair<Double, Long>>): MarketFeatures? {
+        if (history.size < 10) return null
+        
+        val prices = history.map { it.first }
+        val volumes = history.map { it.first } // Simplified - using price as volume proxy
+        
+        // Price action: normalized price change
+        val priceAction = if (prices.size > 1) {
+            (prices.last() - prices.first()) / prices.first()
+        } else 0.0
+        
+        // Volume: average volume over period (simplified)
+        val volume = volumes.average() / volumes.maxOrNull()?.coerceAtLeast(1.0) ?: 1.0
+        
+        // Momentum: rate of change
+        val momentum = if (prices.size >= 5) {
+            val recent = prices.takeLast(5).average()
+            val older = prices.dropLast(5).takeLast(5).average()
+            if (older > 0) (recent - older) / older else 0.0
+        } else 0.0
+        
+        // Volatility: standard deviation of returns
+        val returns = prices.zipWithNext { a, b -> (b - a) / a }
+        val volatility = if (returns.isNotEmpty()) {
+            val mean = returns.average()
+            sqrt(returns.map { (it - mean).pow(2) }.average())
+        } else 0.0
+        
+        // Sentiment: simplified sentiment based on recent price movement
+        val sentiment = when {
+            priceAction > 0.05 -> 0.8
+            priceAction > 0 -> 0.6
+            priceAction > -0.05 -> 0.4
+            else -> 0.2
+        }
+        
+        return MarketFeatures(
+            priceAction = priceAction.coerceIn(-1.0, 1.0),
+            volume = volume.coerceIn(0.0, 1.0),
+            momentum = momentum.coerceIn(-1.0, 1.0),
+            volatility = volatility.coerceIn(0.0, 1.0),
+            sentiment = sentiment.coerceIn(0.0, 1.0)
+        )
+    }
+}
+
 private suspend fun calculateTokenUsdPrice(
     token: com.bswap.server.data.solana.transaction.TokenInfo,
     runtime: TradingRuntime

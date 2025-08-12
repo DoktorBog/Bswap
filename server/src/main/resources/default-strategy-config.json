@@ -1,26 +1,73 @@
 {
   "strategies": [
-    { "name": "sma_cross", "weight": 0.5, "params": { "fast": 5, "slow": 20, "confirmBars": 2, "qtyFraction": 1.0 } },
-    { "name": "rsi", "weight": 0.35, "params": { "period": 14, "buyBelow": 32.0, "sellAbove": 72.0, "qtyFraction": 0.7 } },
-    { "name": "breakout", "weight": 0.4, "params": { "lookback": 30, "bufferPct": 0.003, "qtyFraction": 1.0 } },
-    { "name": "bollinger_mean_reversion", "weight": 0.25, "params": { "period": 20, "dev": 2.2, "qtyFraction": 0.8 } },
-    { "name": "momentum", "weight": 0.2, "params": { "rocPeriod": 6, "buyThreshold": 0.02, "sellThreshold": 0.02, "qtyFraction": 0.5 } }
+    { "name": "ai_strategy", "weight": 1.0, "params": { 
+        "modelType": "NEURAL_NETWORK", 
+        "learningRate": 0.001,
+        "hiddenLayers": [128, 64, 32],
+        "lookbackPeriod": 50,
+        "predictionHorizon": 5,
+        "confidenceThreshold": 0.75,
+        "retrainIntervalMs": 3600000,
+        "maxTrainingSamples": 10000,
+        "featureWeights": {
+          "priceAction": 0.3,
+          "volume": 0.25, 
+          "momentum": 0.2,
+          "volatility": 0.15,
+          "sentiment": 0.1
+        },
+        "riskParameters": {
+          "maxPositionSize": 0.1,
+          "volatilityAdjustment": true,
+          "drawdownLimit": 0.05,
+          "sharpeRatioThreshold": 1.0
+        },
+        "qtyFraction": 1.0,
+        "minHoldMs": 60000,
+        "takeProfitPct": 0.20,
+        "stopLossPct": 0.12,
+        "adaptiveLearning": true,
+        "useEnsemble": true,
+        "sentimentAnalysis": true
+      }
+    },
+    { "name": "sma_cross", "weight": 0.4, "params": { "fast": 5, "slow": 20, "confirmBars": 2, "qtyFraction": 0.8 } },
+    { "name": "rsi", "weight": 0.3, "params": { "period": 14, "buyBelow": 32.0, "sellAbove": 72.0, "qtyFraction": 0.6 } },
+    { "name": "breakout", "weight": 0.35, "params": { "lookback": 30, "bufferPct": 0.003, "qtyFraction": 0.7 } },
+    { "name": "bollinger_mean_reversion", "weight": 0.2, "params": { "period": 20, "dev": 2.2, "qtyFraction": 0.6 } },
+    { "name": "momentum", "weight": 0.15, "params": { "rocPeriod": 6, "buyThreshold": 0.02, "sellThreshold": 0.02, "qtyFraction": 0.4 } },
+    { "name": "technical_analysis_combined", "weight": 0.25, "params": {
+        "smaWeight": 0.4,
+        "rsiWeight": 0.3, 
+        "breakoutWeight": 0.3,
+        "bollingerWeight": 0.2,
+        "momentumWeight": 0.15,
+        "decisionThreshold": 0.65,
+        "qtyFraction": 0.8,
+        "minHoldMs": 60000,
+        "takeProfitPct": 0.22,
+        "stopLossPct": 0.14,
+        "trailingStopPct": 0.09
+      }
+    }
   ],
   "risk": {
-    "maxRiskPerTradeSol": 0.25,
-    "maxOpenPositions": 5,
-    "slippageBps": 150,
-    "takeProfitPct": 0.25,
-    "stopLossPct": 0.15,
-    "trailingStopPct": 0.1,
-    "cooldownMillis": 60000
+    "maxRiskPerTradeSol": 0.2,
+    "maxOpenPositions": 8,
+    "slippageBps": 120,
+    "takeProfitPct": 0.20,
+    "stopLossPct": 0.12,
+    "trailingStopPct": 0.08,
+    "cooldownMillis": 45000
   },
   "filters": {
-    "minAgeMillis": 600000,
-    "minLiquiditySol": 50.0,
-    "minMcapUsd": 200000.0,
+    "minAgeMillis": 300000,
+    "minLiquiditySol": 30.0,
+    "minMcapUsd": 150000.0,
     "pumpFunMode": "allow"
   },
-  "decisionThreshold": 0.6,
-  "tradeQtySol": 0.15
+  "decisionThreshold": 0.7,
+  "tradeQtySol": 0.12,
+  "aiEnhanced": true,
+  "ensembleWeighting": true
 }

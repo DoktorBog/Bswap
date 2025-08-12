@@ -49,7 +49,8 @@ enum class StrategyType {
     BREAKOUT,
     BOLLINGER_MEAN_REVERSION,
     MOMENTUM,
-    TECHNICAL_ANALYSIS_COMBINED
+    TECHNICAL_ANALYSIS_COMBINED,
+    AI_STRATEGY
 }
 
 data class ImmediateConfig(
@@ -125,8 +126,50 @@ data class TechnicalAnalysisConfig(
     val slippageBps: Int = 150
 )
 
+data class AIStrategyConfig(
+    val modelType: AIModelType = AIModelType.NEURAL_NETWORK,
+    val learningRate: Double = 0.001,
+    val hiddenLayers: List<Int> = listOf(128, 64, 32),
+    val lookbackPeriod: Int = 50,
+    val predictionHorizon: Int = 5,
+    val confidenceThreshold: Double = 0.75,
+    val retrainIntervalMs: Long = 3600000, // 1 hour
+    val maxTrainingSamples: Int = 10000,
+    val featureWeights: FeatureWeights = FeatureWeights(),
+    val riskParameters: AIRiskParameters = AIRiskParameters(),
+    val qtyFraction: Double = 1.0,
+    val minHoldMs: Long = 60_000,
+    val takeProfitPct: Double = 0.20,
+    val stopLossPct: Double = 0.12,
+    val adaptiveLearning: Boolean = true,
+    val useEnsemble: Boolean = true,
+    val sentimentAnalysis: Boolean = true
+)
+
+data class FeatureWeights(
+    val priceAction: Double = 0.3,
+    val volume: Double = 0.25,
+    val momentum: Double = 0.2,
+    val volatility: Double = 0.15,
+    val sentiment: Double = 0.1
+)
+
+data class AIRiskParameters(
+    val maxPositionSize: Double = 0.1, // 10% of portfolio
+    val volatilityAdjustment: Boolean = true,
+    val drawdownLimit: Double = 0.05, // 5% max drawdown
+    val sharpeRatioThreshold: Double = 1.0
+)
+
+enum class AIModelType {
+    NEURAL_NETWORK,
+    RANDOM_FOREST,
+    GRADIENT_BOOSTING,
+    ENSEMBLE
+}
+
 data class TradingStrategySettings(
-    val type: StrategyType = StrategyType.PUMPFUN_PRIORITY,
+    val type: StrategyType = StrategyType.AI_STRATEGY,
     val immediate: ImmediateConfig = ImmediateConfig(),
     val delayed: DelayedEntryConfig = DelayedEntryConfig(),
     val batch: BatchAccumulateConfig = BatchAccumulateConfig(),
@@ -136,7 +179,8 @@ data class TradingStrategySettings(
     val breakout: BreakoutConfig = BreakoutConfig(),
     val bollingerMeanReversion: BollingerMeanReversionConfig = BollingerMeanReversionConfig(),
     val momentum: MomentumConfig = MomentumConfig(),
-    val technicalAnalysis: TechnicalAnalysisConfig = TechnicalAnalysisConfig()
+    val technicalAnalysis: TechnicalAnalysisConfig = TechnicalAnalysisConfig(),
+    val aiStrategy: AIStrategyConfig = AIStrategyConfig()
 )
 
 enum class TokenSource {

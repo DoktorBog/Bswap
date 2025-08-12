@@ -21,6 +21,3 @@ enableWasm=false
 
 # Disable JVM instrumentation for Termux
 org.gradle.jvmargs=-Xmx1024M -Dfile.encoding=UTF-8 -XX:+UseParallelGC -XX:MaxGCPauseMillis=1000
-
-# OpenAI API Configuration
-openai.api.key=your-openai-api-key-here

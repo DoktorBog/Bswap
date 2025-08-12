@@ -43,6 +43,31 @@ import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 fun main() {
+    // Validate configuration first
+    val configValidation = ConfigLoader.validateConfiguration()
+    if (!configValidation.isValid) {
+        println("❌ Configuration validation failed:")
+        configValidation.errors.forEach { println("  - $it") }
+        println("Please fix configuration errors and restart.")
+        return
+    }
+    
+    if (configValidation.hasWarnings) {
+        println("⚠️ Configuration warnings:")
+        configValidation.warnings.forEach { println("  - $it") }
+        println()
+    }
+    
+    println("✅ Configuration validated successfully")
+    
+    // Show OpenAI integration status
+    val openaiKey = ConfigLoader.loadOpenAIKey()
+    if (openaiKey != null) {
+        println("✅ OpenAI API key loaded - AI strategies enabled")
+    } else {
+        println("⚠️ OpenAI API key not found - using fallback AI strategies")
+    }
+    
     // Prompt for seed phrase interactively on server start
     val seedPhrase = prompt("Enter your 12/24-word seed phrase (single line): ")
     require(seedPhrase.isNotBlank()) { "Seed phrase is required" }
