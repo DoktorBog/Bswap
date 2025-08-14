@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "lastUpdated": 1734156000000,
+  "coins": [
+    {
+      "symbol": "SOL",
+      "priority": 100,
+      "enabled": true,
+      "tags": ["native", "high-liquidity", "base-token"]
+    },
+    {
+      "symbol": "USDC",
+      "priority": 95,
+      "enabled": true,
+      "tags": ["stablecoin", "high-liquidity", "quote-token"]
+    },
+    {
+      "symbol": "USDT",
+      "priority": 90,
+      "enabled": true,
+      "tags": ["stablecoin", "high-liquidity", "quote-token"]
+    },
+    {
+      "symbol": "JUP",
+      "priority": 85,
+      "enabled": true,
+      "tags": ["dex", "ecosystem", "verified"]
+    },
+    {
+      "symbol": "RAY",
+      "priority": 80,
+      "enabled": true,
+      "tags": ["dex", "ecosystem", "verified"]
+    },
+    {
+      "symbol": "ORCA",
+      "priority": 75,
+      "enabled": true,
+      "tags": ["dex", "ecosystem", "verified"]
+    },
+    {
+      "symbol": "PYTH",
+      "priority": 70,
+      "enabled": true,
+      "tags": ["oracle", "infrastructure", "verified"]
+    },
+    {
+      "symbol": "JTO",
+      "priority": 65,
+      "enabled": true,
+      "tags": ["infrastructure", "verified"]
+    },
+    {
+      "symbol": "mSOL",
+      "priority": 60,
+      "enabled": true,
+      "tags": ["lst", "defi", "verified"]
+    },
+    {
+      "symbol": "bSOL",
+      "priority": 55,
+      "enabled": true,
+      "tags": ["lst", "defi", "verified"]
+    },
+    {
+      "symbol": "jitoSOL",
+      "priority": 50,
+      "enabled": true,
+      "tags": ["lst", "defi", "verified"]
+    },
+    {
+      "symbol": "BONK",
+      "priority": 45,
+      "enabled": true,
+      "tags": ["meme", "community", "high-volume"]
+    },
+    {
+      "symbol": "WIF",
+      "priority": 40,
+      "enabled": true,
+      "tags": ["meme", "community", "high-volume"]
+    },
+    {
+      "symbol": "POPCAT",
+      "priority": 35,
+      "enabled": true,
+      "tags": ["meme", "community", "high-volume"]
+    },
+    {
+      "symbol": "TNSR",
+      "priority": 30,
+      "enabled": true,
+      "tags": ["nft", "marketplace", "verified"]
+    },
+    {
+      "symbol": "HNT",
+      "priority": 25,
+      "enabled": true,
+      "tags": ["iot", "infrastructure", "verified"]
+    },
+    {
+      "symbol": "WEN",
+      "priority": 20,
+      "enabled": true,
+      "tags": ["meme", "community"]
+    },
+    {
+      "symbol": "SAMO",
+      "priority": 15,
+      "enabled": true,
+      "tags": ["meme", "community"]
+    },
+    {
+      "symbol": "DRIFT",
+      "priority": 10,
+      "enabled": false,
+      "tags": ["defi", "derivatives", "experimental"]
+    },
+    {
+      "symbol": "ZEUS",
+      "priority": 5,
+      "enabled": false,
+      "tags": ["meme", "experimental"]
+    },
+    {
+      "symbol": "BOOK",
+      "priority": 5,
+      "enabled": false,
+      "tags": ["meme", "experimental"]
+    }
+  ]
+}

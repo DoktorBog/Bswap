@@ -21,6 +21,7 @@ import com.bswap.server.data.solana.transaction.getTokenAccountsByOwner
 import com.bswap.server.service.JupiterTokensClient
 import com.bswap.server.service.PriceHistoryLoader
 import com.bswap.server.service.WhitelistResolver
+import com.bswap.server.service.RsiWhitelistSource
 import com.bswap.server.stratagy.TradingStrategy
 import com.bswap.server.stratagy.TradingStrategyFactory
 import com.bswap.server.validation.TokenValidator
@@ -96,6 +97,9 @@ class SolanaTokenSwapBot(
     private val whitelistResolver = if (config.whitelist.enabled) {
         WhitelistResolver(JupiterTokensClient(client), config.whitelist.symbols)
     } else null
+    
+    // Simple whitelist for token trading
+    private val rsiWhitelistSource = RsiWhitelistSource()
 
     // Removed multi-RPC pool - using single RPC from config via Constants.RPC_URL
 
@@ -128,6 +132,10 @@ class SolanaTokenSwapBot(
                 }
             }
         }
+        
+        // Start whitelist token observation
+        observeWhitelistTokens(rsiWhitelistSource)
+        logger.info("✅ Whitelist token observation started for ${strategy.type} strategy")
 
         // Initialize sell queue
         if (config.sellQueue.enabled) {
@@ -191,6 +199,7 @@ class SolanaTokenSwapBot(
         if (::sellQueue.isInitialized && config.sellQueue.enabled) {
             sellQueue.stop()
         }
+
 
         // Persistent sell queue removed - no stop needed
 
@@ -277,6 +286,50 @@ class SolanaTokenSwapBot(
                         this@SolanaTokenSwapBot
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Observe whitelist tokens and pass them to current strategy for trading
+     * This allows any strategy (RSI, etc) to trade only whitelisted tokens
+     */
+    fun observeWhitelistTokens(whitelistSource: RsiWhitelistSource) = scope.launch {
+        logger.info("🎯 Starting whitelist token observation for strategy: ${strategy.type}")
+        
+        // Monitor whitelist tokens periodically
+        while (_isActive.get()) {
+            try {
+                val whitelistedTokens = whitelistSource.getWhitelistedTokens()
+                logger.info("📊 Checking ${whitelistedTokens.size} whitelisted tokens")
+                
+                // For each whitelisted token, create a TokenMeta and pass to strategy
+                whitelistedTokens.forEach { mint ->
+                    if (!_isActive.get()) return@forEach
+                    
+                    // Skip if already processing this token
+                    if (stateMap.containsKey(mint)) {
+                        return@forEach
+                    }
+                    
+                    // Create TokenMeta for whitelisted token
+                    val tokenMeta = TokenMeta(
+                        mint = mint,
+                        source = TokenSource.PROFILE // Use PROFILE as default source
+                    )
+                    
+                    logger.info("🔍 Processing whitelisted token: $mint with ${strategy.type} strategy")
+                    
+                    // Pass to current strategy (RSI or any other)
+                    strategy.onDiscovered(tokenMeta, this@SolanaTokenSwapBot)
+                }
+                
+                // Wait before next check (30 seconds)
+                delay(30_000)
+                
+            } catch (e: Exception) {
+                logger.error("Error in whitelist observation: ${e.message}", e)
+                delay(5_000) // Wait 5 seconds on error
             }
         }
     }
@@ -632,14 +685,44 @@ class SolanaTokenSwapBot(
             "isActive" to _isActive.get(),
             "activeTokensCount" to stateMap.size,
             "processingTokens" to processingTokens.get(),
-            "whitelistEnabled" to (whitelistResolver != null),
-            "whitelistSize" to (whitelistResolver?.getCacheSize() ?: 0),
+            "whitelistEnabled" to true,
+            "whitelistSize" to rsiWhitelistSource.getWhitelistSize(),
+            "whitelistedTokens" to rsiWhitelistSource.getWhitelistedTokens().take(5), // Show first 5
+            "currentStrategy" to strategy.type.toString(),
             "sellQueueEnabled" to (config.sellQueue.enabled && ::sellQueue.isInitialized),
-            "enhancedSellQueueEnabled" to true,
             "rpcUrl" to RPC_URL,
             "priceMissStats" to priceMissTracker.getStats(),
             "priceServiceStats" to priceService.getCacheStats(),
             "priceHistoryStats" to priceHistoryLoader.getCacheStats()
         )
+    }
+    
+    /**
+     * Get whitelist source for external access
+     */
+    fun getWhitelistSource(): RsiWhitelistSource = rsiWhitelistSource
+    
+    /**
+     * Add token to whitelist
+     */
+    fun addToWhitelist(mint: String) {
+        rsiWhitelistSource.addToken(mint)
+        logger.info("Added $mint to whitelist")
+    }
+    
+    /**
+     * Remove token from whitelist
+     */
+    fun removeFromWhitelist(mint: String) {
+        rsiWhitelistSource.removeToken(mint)
+        logger.info("Removed $mint from whitelist")
+    }
+    
+    /**
+     * Update entire whitelist
+     */
+    fun updateWhitelist(tokens: Set<String>) {
+        rsiWhitelistSource.updateWhitelist(tokens)
+        logger.info("Updated whitelist with ${tokens.size} tokens")
     }
 }

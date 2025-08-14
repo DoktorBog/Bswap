@@ -28,7 +28,7 @@ data class PricePoint(
 data class PriceHistoryConfig(
     val maxDataPoints: Int = 50,          // Maximum price points to keep for RSI
     val cacheExpiryMs: Long = 300_000L,   // 5 minutes cache
-    val includeSources: Set<String> = setOf("dexscreener", "birdeye", "pump.fun", "jupiter"),
+    val includeSources: Set<String> = setOf("birdeye", "pump.fun", "jupiter"),
     val fetchIntervalMs: Long = 60_000L   // Minimum interval between fetches
 )
 
@@ -64,9 +64,8 @@ class PriceHistoryLoader(
         
         val allPricePoints = mutableListOf<PricePoint>()
         
-        // Fetch from multiple sources in parallel
+        // Fetch from multiple sources in parallel (excluding dexscreener for performance)
         val jobs = listOf(
-            async { if (config.includeSources.contains("dexscreener")) fetchFromDexScreener(mint) else emptyList() },
             async { if (config.includeSources.contains("birdeye")) fetchFromBirdeye(mint) else emptyList() },
             async { if (config.includeSources.contains("pump.fun")) fetchFromPumpFun(mint) else emptyList() },
             async { if (config.includeSources.contains("jupiter")) fetchFromJupiterAggregator(mint) else emptyList() }

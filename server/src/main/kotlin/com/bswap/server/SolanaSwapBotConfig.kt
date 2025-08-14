@@ -34,7 +34,10 @@ data class SolanaSwapBotConfig(
     val priceService: PriceServiceConfig = PriceServiceConfig(),
 
     // Whitelist configuration
-    val whitelist: WhitelistConfig = WhitelistConfig()
+    val whitelist: WhitelistConfig = WhitelistConfig(),
+    
+    // Whitelist buy observer configuration
+    val whitelistBuyObserver: WhitelistBuyObserverConfig = WhitelistBuyObserverConfig()
 )
 
 sealed interface TokenState {
@@ -228,6 +231,19 @@ data class WhitelistConfig(
         // Other ecosystem tokens
         "TNSR", "HNT", "WEN", "SAMO"
     )
+)
+
+data class WhitelistBuyObserverConfig(
+    val enabled: Boolean = true,
+    val observationIntervalMs: Long = 10000, // Check every 10 seconds
+    val priceChangeThreshold: Double = 0.05, // 5% price increase threshold
+    val volumeThreshold: Double = 50000.0, // Minimum volume threshold
+    val maxConcurrentBuys: Int = 2, // Maximum concurrent buy operations
+    val cooldownMs: Long = 300000, // 5 minutes cooldown between buys for same token
+    val priorityThreshold: Int = 50, // Only observe coins with priority >= this value
+    val enablePriceAlerts: Boolean = true,
+    val enableVolumeAlerts: Boolean = true,
+    val autoExecuteBuys: Boolean = true // Automatically execute buys on signals
 )
 
 var privateKey: String = ""

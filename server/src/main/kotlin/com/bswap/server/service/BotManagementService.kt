@@ -51,6 +51,7 @@ class BotManagementService(
                 _startTime.set(System.currentTimeMillis())
                 _lastActivity.set(System.currentTimeMillis())
                 bot.start()
+                
                 val status = createBotStatus()
                 _botStatus.value = status
 
@@ -59,7 +60,7 @@ class BotManagementService(
                //     preFetchTransactionHistory(publicKey)
                // }
 
-                logger.info("Trading bot started successfully")
+                logger.info("Trading bot started successfully with whitelist trading")
                 ApiResponse(true, "Bot started successfully", status)
             }
         } catch (e: Exception) {
@@ -443,6 +444,64 @@ class BotManagementService(
         } catch (e: Exception) {
             logger.error("Failed to execute emergency stop", e)
             ApiResponse(false, "Failed to execute emergency stop: ${e.message}")
+        }
+    }
+
+    // Whitelist Management Methods
+    fun getWhitelistStatus(): ApiResponse<Map<String, Any>> {
+        return try {
+            val whitelistSource = bot.getWhitelistSource()
+            
+            val status = mapOf(
+                "whitelistSize" to whitelistSource.getWhitelistSize(),
+                "whitelistedTokens" to whitelistSource.getWhitelistedTokens(),
+                "currentStrategy" to bot.config.strategySettings.type.toString()
+            )
+            
+            ApiResponse(true, "Whitelist status retrieved", status)
+        } catch (e: Exception) {
+            logger.error("Failed to get whitelist status", e)
+            ApiResponse(false, "Failed to get whitelist status: ${e.message}")
+        }
+    }
+    
+    fun addTokenToWhitelist(mint: String): ApiResponse<String> {
+        return try {
+            bot.addToWhitelist(mint)
+            ApiResponse(true, "Token $mint added to whitelist")
+        } catch (e: Exception) {
+            logger.error("Failed to add token to whitelist", e)
+            ApiResponse(false, "Failed to add token to whitelist: ${e.message}")
+        }
+    }
+    
+    fun removeTokenFromWhitelist(mint: String): ApiResponse<String> {
+        return try {
+            bot.removeFromWhitelist(mint)
+            ApiResponse(true, "Token $mint removed from whitelist")
+        } catch (e: Exception) {
+            logger.error("Failed to remove token from whitelist", e)
+            ApiResponse(false, "Failed to remove token from whitelist: ${e.message}")
+        }
+    }
+    
+    fun updateWhitelist(tokens: Set<String>): ApiResponse<String> {
+        return try {
+            bot.updateWhitelist(tokens)
+            ApiResponse(true, "Whitelist updated with ${tokens.size} tokens")
+        } catch (e: Exception) {
+            logger.error("Failed to update whitelist", e)
+            ApiResponse(false, "Failed to update whitelist: ${e.message}")
+        }
+    }
+    
+    fun resetWhitelistToDefault(): ApiResponse<String> {
+        return try {
+            bot.getWhitelistSource().resetToDefault()
+            ApiResponse(true, "Whitelist reset to default tokens")
+        } catch (e: Exception) {
+            logger.error("Failed to reset whitelist", e)
+            ApiResponse(false, "Failed to reset whitelist: ${e.message}")
         }
     }
 

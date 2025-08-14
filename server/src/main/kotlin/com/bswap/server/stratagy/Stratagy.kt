@@ -331,21 +331,7 @@ class RsiBasedTradingStrategy(
     private val priceHistory = ConcurrentHashMap<String, MutableList<Double>>()
     private val rsiValues = ConcurrentHashMap<String, MutableList<Double>>()
     
-    companion object {
-        @Volatile
-        private var lastSellTime = 0L
-        private const val SELL_DELAY_MS = 3000L // 3 seconds between sells
-        
-        private suspend fun canSellNow(): Boolean {
-            val now = System.currentTimeMillis()
-            return if (now - lastSellTime >= SELL_DELAY_MS) {
-                lastSellTime = now
-                true
-            } else {
-                false
-            }
-        }
-    }
+    // NO SELL DELAY - RSI strategy sells immediately when signal triggers
 
     override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
         val isNew = runtime.isNew(meta.mint)
@@ -467,7 +453,6 @@ class RsiBasedTradingStrategy(
                 log.info("💸 RSI SELL CHECK: $mint (balance: $balance)")
                 
                 val tokenAge = now - (status.createdAt ?: 0)
-                val minHoldTimeMs = cfg.minHoldMs
                 
                 var shouldSell = false
                 var sellReason = ""
@@ -520,80 +505,27 @@ class RsiBasedTradingStrategy(
                     }
                 }
                 
-                // Fallback: Sell after extended hold time if no RSI signal
-                if (!shouldSell && tokenAge >= cfg.minHoldMs * 10) { // 10x min hold time
-                    shouldSell = true
-                    sellReason = "Extended hold time reached (${tokenAge}ms)"
-                }
+                // NO FALLBACK SELLS - No time-based selling, only RSI signals
                 
-                // Execute sell if triggered (with delay check)
+                // Execute sell if triggered by RSI signal
                 if (shouldSell) {
-                    if (canSellNow()) {
-                        log.info("🔥 RSI SELL EXECUTED: $mint - Reason: $sellReason, Balance: $balance, Age: ${tokenAge}ms")
-                        runtime.sell(mint)
-                        plannedSells.remove(mint)
-                        rsiValues.remove(mint) // Clear RSI history after sell
-                        log.info("📈 RSI SELL COMPLETE: $mint - Final RSI: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Final Price: ${"%.6f".format(currentPrice)}")
-                    } else {
-                        log.info("⏸️ RSI SELL DELAYED: $mint - waiting for cooldown - $sellReason")
-                        // Keep the sell planned for next tick
-                    }
+                    log.info("🔥 RSI SELL EXECUTED: $mint - Reason: $sellReason, Balance: $balance")
+                    runtime.sell(mint)
+                    plannedSells.remove(mint)
+                    rsiValues.remove(mint) // Clear RSI history after sell
+                    log.info("📈 RSI SELL COMPLETE: $mint - Final RSI: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Final Price: ${"%.6f".format(currentPrice)}")
                 } else {
                     log.debug("💎 RSI HOLDING: $mint - RSI: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Price: ${"%.6f".format(currentPrice)}, Age: ${tokenAge}ms")
                 }
             }
         }
 
-        // Handle timed sells (backup mechanism) - use configured minimum time
-        val expiredSells = plannedSells.entries.filter { 
-            val age = now - (runtime.status(it.key)?.createdAt ?: 0)
-            it.value <= now && age >= cfg.minHoldMs
-        }
-        if (expiredSells.isNotEmpty()) {
-            log.info("⏰ RSI TIMED SELLS: Processing ${expiredSells.size} expired sells")
-            for (e in expiredSells) {
-                val st = runtime.status(e.key)
-                if (st?.state == TokenState.Swapped) {
-                    if (canSellNow()) {
-                        val currentRsiForLog = if (priceHistory[e.key]?.size ?: 0 >= cfg.period) {
-                            rsi(priceHistory[e.key]!!, cfg.period)
-                        } else null
-                        log.info("⏰ RSI TIMED SELL EXECUTED: ${e.key} - Final RSI: ${currentRsiForLog?.let { "%.2f".format(it) } ?: "null"}")
-                        runtime.sell(e.key)
-                        plannedSells.remove(e.key)
-                        rsiValues.remove(e.key)
-                    } else {
-                        log.info("⏸️ RSI TIMED SELL DELAYED: ${e.key} - waiting for cooldown")
-                        // Keep in planned sells for next tick
-                        break // Stop processing more sells this tick
-                    }
-                } else {
-                    plannedSells.remove(e.key)
-                }
-            }
-        }
+        // TIMED SELLS DISABLED - No automatic selling
+        // All sells must be triggered manually through the API
+        plannedSells.clear() // Clear any planned sells
         
-        // Sell ALL wallet tokens that have been held for extended time (with delay)
-        for (mint in walletMints) {
-            val status = runtime.status(mint)
-            if (status?.state == TokenState.Swapped) {
-                val tokenAge = now - (status.createdAt ?: 0)
-                if (tokenAge >= cfg.minHoldMs * 10 && !plannedSells.containsKey(mint)) { // Extended hold time for RSI strategy
-                    if (canSellNow()) {
-                        val currentRsiForLog = if (priceHistory[mint]?.size ?: 0 >= cfg.period) {
-                            rsi(priceHistory[mint]!!, cfg.period)
-                        } else null
-                        log.info("⏰ RSI FORCE SELL EXECUTED: $mint - Held: ${tokenAge}ms, Final RSI: ${currentRsiForLog?.let { "%.2f".format(it) } ?: "null"}")
-                        runtime.sell(mint)
-                        rsiValues.remove(mint)
-                    } else {
-                        log.info("⏸️ RSI FORCE SELL DELAYED: $mint - waiting for cooldown")
-                        // Will try again next tick
-                        break // Stop processing more force sells this tick
-                    }
-                }
-            }
-        }
+        // FORCE SELLS DISABLED - No automatic selling based on hold time
+        // All sells must be triggered manually through the API
         
         log.info("📊 RSI STRATEGY SUMMARY: ${plannedSells.size} planned sells, ${walletMints.size} wallet tokens, ${rsiValues.size} RSI tracked, ${priceHistory.size} price histories")
     }
