@@ -61,24 +61,26 @@ fun main() {
     val commandProcessor = com.bswap.server.command.CommandProcessor(botManagementService, serverWalletService, priceService)
 
     // Pre-populate wallet cache immediately after wallet initialization
-    println("Pre-populating wallet cache for immediate availability...")
-    appScope.launch {
-        try {
-            val request = com.bswap.shared.model.WalletHistoryRequest(limit = 50, offset = 0)
-            serverWalletService.getBotWalletHistory(request, silent = false)
-            println("✅ Wallet cache pre-population completed")
-        } catch (e: Exception) {
-            println("❌ Wallet cache pre-population failed: ${e.message}")
-        }
-    }
+    // DISABLED: Turn off history fetch for now
+    // println("Pre-populating wallet cache for immediate availability...")
+    // appScope.launch {
+    //     try {
+    //         val request = com.bswap.shared.model.WalletHistoryRequest(limit = 50, offset = 0)
+    //         serverWalletService.getBotWalletHistory(request, silent = false)
+    //         println("✅ Wallet cache pre-population completed")
+    //     } catch (e: Exception) {
+    //         println("❌ Wallet cache pre-population failed: ${e.message}")
+    //     }
+    // }
 
     // Start cache cleanup job
-    appScope.launch {
-        while (true) {
-            delay(5 * 60 * 1000L) // Every 5 minutes
-            serverWalletService.cleanupCache()
-        }
-    }
+    // DISABLED: Turn off cache cleanup for now
+    // appScope.launch {
+    //     while (true) {
+    //         delay(5 * 60 * 1000L) // Every 5 minutes
+    //         serverWalletService.cleanupCache()
+    //     }
+    // }
     val pumpFun = PumpFunService
     pumpFun.connect()
     botManagementService.bot.observePumpFun(pumpFun.observeEvents())
@@ -143,6 +145,20 @@ val client by lazy {
         install(ClientContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
         }
+        engine {
+            // Configure connection timeouts
+            requestTimeout = 30_000 // 30 seconds
+            
+            // Connection pooling
+            maxConnectionsCount = 100
+        }
+        
+        // Add timeout handling
+        install(io.ktor.client.plugins.HttpTimeout) {
+            requestTimeoutMillis = 30_000
+            connectTimeoutMillis = 10_000
+            socketTimeoutMillis = 30_000
+        }
     }
 }
 
@@ -165,3 +181,22 @@ val walletRepository = com.bswap.shared.wallet.WalletRepository(
 
 private fun createRPC(client: HttpClient) =
     RPC(RPC_URL, NetworkDriver(client))
+
+/**
+ * Execute RPC calls with retry logic for connection issues
+ */
+suspend fun <T> withRpcRetry(maxRetries: Int = 3, operation: suspend () -> T): T {
+    var lastException: Exception? = null
+    repeat(maxRetries) { attempt ->
+        try {
+            return operation()
+        } catch (e: Exception) {
+            lastException = e
+            println("RPC operation attempt ${attempt + 1} failed: ${e.message}")
+            if (attempt < maxRetries - 1) {
+                kotlinx.coroutines.delay(1000L * (attempt + 1)) // 1s, 2s, 3s delays
+            }
+        }
+    }
+    throw lastException ?: Exception("All RPC operation attempts failed")
+}

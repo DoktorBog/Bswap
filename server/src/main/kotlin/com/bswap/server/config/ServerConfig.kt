@@ -1,13 +1,26 @@
 package com.bswap.server.config
 
+import java.io.File
+import java.io.FileInputStream
+import java.util.*
+
 /**
  * Simple configuration object that reads endpoint URLs from environment variables.
- * Defaults match the previously hard coded values so existing behaviour does not change
- * when no environment variables are provided.
+ * Falls back to local.properties file, then to defaults.
  */
 object ServerConfig {
+    private val localProperties: Properties by lazy {
+        Properties().apply {
+            val localPropsFile = File("local.properties")
+            if (localPropsFile.exists()) {
+                FileInputStream(localPropsFile).use { load(it) }
+            }
+        }
+    }
+
     val rpcUrl: String = System.getenv("RPC_URL")
-        ?: "https://falling-methodical-cloud.solana-mainnet.quiknode.pro/83a4d204b9d49f43ea075b7d83a85bf92d6b5251"
+        ?: localProperties.getProperty("rpc.url")
+        ?: "https://holy-few-tree.solana-mainnet.quiknode.pro/c061e81d45703ffe9ca9ffbffab28e655ef7d53c"
     val jupiterApiUrl: String = System.getenv("JUPITER_API_URL") ?: "https://quote-api.jup.ag/v6"
 
     val dexTokenProfilesUrl: String = System.getenv("DEX_TOKEN_PROFILES_URL")

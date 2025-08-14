@@ -3,6 +3,7 @@ package com.bswap.server
 import com.bswap.server.validation.TokenValidator
 import com.bswap.server.validation.ValidationConfig
 import com.bswap.shared.wallet.WalletConfig
+import foundation.metaplex.solanapublickeys.PublicKey
 import kotlinx.coroutines.runBlocking
 import kotlin.test.*
 

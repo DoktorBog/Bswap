@@ -2,6 +2,7 @@ package com.bswap.server.command
 
 import com.bswap.server.service.BotManagementService
 import com.bswap.server.service.ServerWalletService
+import com.bswap.shared.wallet.WalletConfig
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 
@@ -254,7 +255,7 @@ class CommandProcessor(
         ⚙️ Current Configuration:
         
         Server: Running
-        Bot Wallet: CtKJfXzxVN5cwc1krUrCu2Sd44ybjttJDjopJC1WqPra
+        Bot Wallet: ${WalletConfig.current().publicKey}
         RPC URL: ${com.bswap.server.RPC_URL}
         Jupiter API: ${com.bswap.server.JUPITER_API_URL}
         

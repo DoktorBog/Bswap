@@ -12,7 +12,7 @@ data class SolanaSwapBotConfig(
     val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
     val solAmountToTrade: BigDecimal = BigDecimal("0.001"),
     val autoSellAllSpl: Boolean = true,
-    val sellAllSplIntervalMs: Long = 60_000 * 10,
+    val sellAllSplIntervalMs: Long = 60_000 * 3,
     val closeAccountsIntervalMs: Long = 60_000,
     val zeroBalanceCloseBatch: Int = 10,
     val splSellBatch: Int = 3,
@@ -21,8 +21,20 @@ data class SolanaSwapBotConfig(
     val validationMaxRisk: Double = 0.7,
     val maxKnownTokens: Int = 1000,
     val strategySettings: TradingStrategySettings = TradingStrategySettings(),
-    val strategyTickMs: Long = 1_000,
-    val blockBuy: Boolean = false,
+    val strategyTickMs: Long = 2000,   // Slower strategy ticks to reduce RPC calls
+    val blockBuy: Boolean = false,  // Allow buying
+
+    // Sell queue configuration
+    val sellQueue: SellQueueConfig = SellQueueConfig(),
+
+    // RPC rate limiter configuration
+    val rpcRateLimiter: RpcRateLimiterConfig = RpcRateLimiterConfig(),
+
+    // Price service configuration
+    val priceService: PriceServiceConfig = PriceServiceConfig(),
+
+    // Whitelist configuration
+    val whitelist: WhitelistConfig = WhitelistConfig()
 )
 
 sealed interface TokenState {
@@ -49,7 +61,8 @@ enum class StrategyType {
     BREAKOUT,
     BOLLINGER_MEAN_REVERSION,
     MOMENTUM,
-    TECHNICAL_ANALYSIS_COMBINED
+    TECHNICAL_ANALYSIS_COMBINED,
+    WALLET_SELL_ONLY
 }
 
 data class ImmediateConfig(
@@ -81,11 +94,13 @@ data class SmaCrossConfig(
 )
 
 data class RsiBasedConfig(
-    val period: Int = 14,
-    val buyBelow: Double = 30.0,
-    val sellAbove: Double = 70.0,
+    val period: Int = 14,              // Standard RSI period for better accuracy
+    val oversoldThreshold: Double = 30.0,  // Buy when RSI below this
+    val overboughtThreshold: Double = 70.0, // Sell when RSI above this
+    val buyBelow: Double = 30.0,      // Legacy - same as oversoldThreshold
+    val sellAbove: Double = 70.0,     // Legacy - same as overboughtThreshold
     val qtyFraction: Double = 1.0,
-    val minHoldMs: Long = 60_000
+    val minHoldMs: Long = 3_000       // Only 3 seconds minimum hold
 )
 
 data class BreakoutConfig(
@@ -126,7 +141,7 @@ data class TechnicalAnalysisConfig(
 )
 
 data class TradingStrategySettings(
-    val type: StrategyType = StrategyType.PUMPFUN_PRIORITY,
+    val type: StrategyType = StrategyType.WALLET_SELL_ONLY,
     val immediate: ImmediateConfig = ImmediateConfig(),
     val delayed: DelayedEntryConfig = DelayedEntryConfig(),
     val batch: BatchAccumulateConfig = BatchAccumulateConfig(),
@@ -136,7 +151,20 @@ data class TradingStrategySettings(
     val breakout: BreakoutConfig = BreakoutConfig(),
     val bollingerMeanReversion: BollingerMeanReversionConfig = BollingerMeanReversionConfig(),
     val momentum: MomentumConfig = MomentumConfig(),
-    val technicalAnalysis: TechnicalAnalysisConfig = TechnicalAnalysisConfig()
+    val technicalAnalysis: TechnicalAnalysisConfig = TechnicalAnalysisConfig(),
+    val walletSellOnly: WalletSellOnlyConfig = WalletSellOnlyConfig()
+)
+
+data class WalletSellOnlyConfig(
+    val sellIntervalMs: Long = 5_000L,      // Check for sells every 5 seconds (more frequent)
+    val minHoldTimeMs: Long = 1_000L,       // Minimum 1 second before selling (immediate)
+    val maxHoldTimeMs: Long = 60_000L,      // Force sell after 1 minute (faster)
+    val sellDelayBetweenTokensMs: Long = 500L, // 0.5 seconds between sell batches (faster)
+    val ignoreTokens: Set<String> = setOf(  // Don't sell these tokens
+        "So11111111111111111111111111111111111111112", // SOL
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
+        "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"  // USDT
+    )
 )
 
 enum class TokenSource {
@@ -156,6 +184,7 @@ data class TokenMeta(
 interface TradingRuntime {
     val walletConfig: WalletConfig
     val config: SolanaSwapBotConfig
+    val getPriceHistory: (suspend (String) -> List<Double>?)? // Optional price history provider
     fun now(): Long
     fun isNew(mint: String): Boolean
     fun status(mint: String): TokenStatus?
@@ -165,5 +194,40 @@ interface TradingRuntime {
     suspend fun allTokens(): List<TokenInfo>
     suspend fun getTokenUsdPrice(mint: String): Double?
 }
+
+data class SellQueueConfig(
+    val enabled: Boolean = false,     // Disable queue - use direct sells
+    val maxConcurrency: Int = 3,
+    val spacingMs: Long = 100L,
+    val retryCount: Int = 2,
+    val retryDelayMs: Long = 500L
+)
+
+data class RpcRateLimiterConfig(
+    val enabled: Boolean = true,
+    val maxRps: Int = 14,
+    val bucketSize: Int = 28 // Allow some burst capacity
+)
+
+data class PriceServiceConfig(
+    val sellOnPriceMissing: Boolean = false,
+    val priceMissingMaxStrikes: Int = 4,
+    val priceMissingWindowMs: Long = 60_000L,
+    val allowBuyWithoutPrice: Boolean = false
+)
+
+data class WhitelistConfig(
+    val enabled: Boolean = false,
+    val symbols: Set<String> = setOf(
+        // Major liquid tokens
+        "SOL", "USDC", "USDT", "JUP", "PYTH", "JTO", "RAY", "ORCA",
+        // LST tokens
+        "mSOL", "bSOL", "jitoSOL",
+        // Large meme coins with good liquidity
+        "BONK", "WIF", "POPCAT",
+        // Other ecosystem tokens
+        "TNSR", "HNT", "WEN", "SAMO"
+    )
+)
 
 var privateKey: String = ""

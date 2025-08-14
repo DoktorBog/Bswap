@@ -48,6 +48,9 @@ dependencies {
 
     implementation(project(":shared"))
     implementation("org.bouncycastle:bcprov-jdk15on:1.70")
+    
+    // SQLite JDBC driver for PersistentSellQueue
+    implementation("org.xerial:sqlite-jdbc:3.46.1.0")
 
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")   // актуальная на август 2025
 }

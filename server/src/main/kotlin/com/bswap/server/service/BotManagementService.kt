@@ -33,7 +33,7 @@ class BotManagementService(
 
     private var _walletConfig = WalletConfig.current()
     private var _config = SolanaSwapBotConfig()
-    var bot: SolanaTokenSwapBot = SolanaTokenSwapBot(_walletConfig, _config, priceService = priceService)
+    var bot: SolanaTokenSwapBot = SolanaTokenSwapBot(_walletConfig, _config)
     private var _tradingParameters = TradingParameters()
     private var _riskSettings = RiskSettings()
     private var _positions = mutableListOf<BotPosition>()
@@ -54,10 +54,10 @@ class BotManagementService(
                 val status = createBotStatus()
                 _botStatus.value = status
 
-                // Pre-fetch transaction history silently in background
-                _walletConfig.publicKey?.let { publicKey ->
-                    preFetchTransactionHistory(publicKey)
-                }
+               // // Pre-fetch transaction history silently in background
+               // _walletConfig.publicKey?.let { publicKey ->
+               //     preFetchTransactionHistory(publicKey)
+               // }
 
                 logger.info("Trading bot started successfully")
                 ApiResponse(true, "Bot started successfully", status)
@@ -116,7 +116,7 @@ class BotManagementService(
 
             // Update wallet config reference and recreate bot with updated configurations
             _walletConfig = WalletConfig.current()
-            bot = SolanaTokenSwapBot(_walletConfig, _config, priceService = priceService)
+            bot = SolanaTokenSwapBot(_walletConfig, _config)
 
             if (wasRunning) {
                 startBot()
