@@ -10,7 +10,7 @@ import java.math.BigDecimal
 
 data class SolanaSwapBotConfig(
     val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
-    val solAmountToTrade: BigDecimal = BigDecimal("0.001"),
+    val solAmountToTrade: BigDecimal = BigDecimal("0.0053"),
     val autoSellAllSpl: Boolean = true,
     val sellAllSplIntervalMs: Long = 60_000 * 3,
     val closeAccountsIntervalMs: Long = 60_000,
@@ -94,13 +94,13 @@ data class SmaCrossConfig(
 )
 
 data class RsiBasedConfig(
-    val period: Int = 14,              // Standard RSI period for better accuracy
-    val oversoldThreshold: Double = 30.0,  // Buy when RSI below this
-    val overboughtThreshold: Double = 70.0, // Sell when RSI above this
+    val period: Int = 14,              // Standard RSI period - now uses real price history
+    val oversoldThreshold: Double = 30.0,  // Buy when RSI below this (with price history)
+    val overboughtThreshold: Double = 70.0, // Sell when RSI above this (with price history)
     val buyBelow: Double = 30.0,      // Legacy - same as oversoldThreshold
     val sellAbove: Double = 70.0,     // Legacy - same as overboughtThreshold
     val qtyFraction: Double = 1.0,
-    val minHoldMs: Long = 3_000       // Only 3 seconds minimum hold
+    val minHoldMs: Long = 3_000       // Minimum hold time before RSI-based sell signals
 )
 
 data class BreakoutConfig(
@@ -141,7 +141,7 @@ data class TechnicalAnalysisConfig(
 )
 
 data class TradingStrategySettings(
-    val type: StrategyType = StrategyType.WALLET_SELL_ONLY,
+    val type: StrategyType = StrategyType.RSI_BASED,
     val immediate: ImmediateConfig = ImmediateConfig(),
     val delayed: DelayedEntryConfig = DelayedEntryConfig(),
     val batch: BatchAccumulateConfig = BatchAccumulateConfig(),

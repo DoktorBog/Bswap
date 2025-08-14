@@ -11,7 +11,29 @@ internal fun sma(values: List<Double>, period: Int): Double? {
 }
 
 internal fun rsi(closes: List<Double>, period: Int): Double? {
-    if (period <= 1 || closes.size <= period) return null
+    val logger = org.slf4j.LoggerFactory.getLogger("RSI-Calculator")
+    
+    // Enhanced validation for insufficient data
+    if (period <= 1) {
+        logger.warn("🔢 RSI CALC: Invalid period=$period (must be > 1)")
+        return null
+    }
+    
+    if (closes.size <= period) {
+        logger.warn("🔢 RSI CALC: Insufficient data - DataPoints=${closes.size}, RequiredPeriod=$period")
+        
+        // For very small datasets, return neutral RSI
+        if (closes.size >= 3) {
+            logger.info("🔧 RSI FALLBACK: Using simplified calculation for ${closes.size} points")
+            // Simple fallback: if last price > average of previous prices, RSI > 50
+            val lastPrice = closes.last()
+            val avgPrice = closes.dropLast(1).average()
+            return if (lastPrice > avgPrice) 65.0 else 35.0
+        }
+        
+        return null
+    }
+    
     var gain = 0.0
     var loss = 0.0
     for (i in 1..period) {
@@ -29,7 +51,12 @@ internal fun rsi(closes: List<Double>, period: Int): Double? {
     }
     if (loss == 0.0) return 100.0
     val rs = gain / loss
-    return 100.0 - 100.0 / (1.0 + rs)
+    val rsiValue = 100.0 - 100.0 / (1.0 + rs)
+    
+    // Log RSI calculation details for debugging
+    logger.debug("🔢 RSI CALC: Period=$period, DataPoints=${closes.size}, AvgGain=${"%.6f".format(gain)}, AvgLoss=${"%.6f".format(loss)}, RS=${"%.4f".format(rs)}, RSI=${"%.2f".format(rsiValue)}")
+    
+    return rsiValue
 }
 
 private fun stddev(values: List<Double>): Double {

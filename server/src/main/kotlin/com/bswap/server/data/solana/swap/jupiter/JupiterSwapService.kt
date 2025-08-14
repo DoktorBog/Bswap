@@ -13,7 +13,6 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
-import org.slf4j.LoggerFactory
 import kotlin.system.measureTimeMillis
 
 class JupiterSwapService(
@@ -21,7 +20,6 @@ class JupiterSwapService(
     private val jupiterApiUrl: String = JUPITER_API_URL
 ) {
     val json = Json { ignoreUnknownKeys = true }
-    private val logger = LoggerFactory.getLogger(javaClass)
 
     private suspend fun getQuote(
         inputMint: String,
@@ -37,7 +35,6 @@ class JupiterSwapService(
                 parameter("autoSlippage", true)
             }.bodyAsText()
         }
-        logger.debug("quote latency=${time}ms")
         return json.decodeFromString(QuoteResponse.serializer(), text)
     }
 
@@ -57,7 +54,7 @@ class JupiterSwapService(
                 """.trimIndent()
             )
         }
-        println("response ${response.bodyAsText()}")
+        response.bodyAsText()
         return json.decodeFromString(SwapResponse.serializer(), response.bodyAsText())
     }
 

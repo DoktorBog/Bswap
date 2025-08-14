@@ -70,7 +70,7 @@ data class Social(
 data class Info(
     val imageUrl: String? = null,
     val websites: List<Website>? = null,
-    val socials: List<Social>? = null
+    //val socials: List<Social>? = null
 )
 
 @Serializable

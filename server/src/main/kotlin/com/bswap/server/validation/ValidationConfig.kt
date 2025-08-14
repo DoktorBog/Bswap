@@ -13,9 +13,9 @@ data class ValidationConfig(
     val cacheTtlMinutes: Long = 10,
     val rateLimitDelayMs: Long = 120,
     val maxRetries: Int = 3,
-    val minLiquidity: Double = 10.0,            // Even lower liquidity requirement
-    val minHolderCount: Int = 1,                // Only need 1 holder
-    val maxTopHolderPercentage: Double = 99.0,  // Allow even more concentrated ownership
-    val maxSupply: Double = 10_000_000_000_000.0, // Allow extremely high supply
-    val maxRiskScore: Double = 0.99             // Allow extremely high risk tokens
+    val minLiquidity: Double = 5_000.0,
+    val minHolderCount: Int = 10,
+    val maxTopHolderPercentage: Double = 20.0,
+    val maxSupply: Double = 10_000_000_000.0,
+    val maxRiskScore: Double = 0.5
 )

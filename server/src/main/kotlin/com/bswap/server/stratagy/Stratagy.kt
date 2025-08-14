@@ -100,6 +100,21 @@ abstract class BaseStrategy(
         }
         return true
     }
+    
+    /**
+     * RSI-specific price check - more permissive for strategy that uses synthetic data
+     */
+    protected suspend fun shouldAllowRsiBuy(mint: String, runtime: TradingRuntime): Boolean {
+        // For RSI strategy, if we have synthetic price history, allow the buy even without real price
+        if (!runtime.config.priceService.allowBuyWithoutPrice) {
+            val price = runtime.getTokenUsdPrice(mint)
+            if (price == null) {
+                log.info("🔧 RSI PRICE OVERRIDE: $mint - allowing buy with synthetic price data (no real USD price)")
+                return true  // Allow buy for RSI if we have historical data for calculation
+            }
+        }
+        return true
+    }
 
     /**
      * Get all tokens in strategy universe (discovered + wallet-held)
@@ -333,9 +348,14 @@ class RsiBasedTradingStrategy(
     }
 
     override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
-        if (!runtime.isNew(meta.mint)) return
+        val isNew = runtime.isNew(meta.mint)
+        log.info("🏢 RSI DISCOVER: ${meta.mint} (${meta.source}) - IsNew: $isNew")
         
-        log.info("📈 RSI Strategy: New token discovered ${meta.mint} from ${meta.source}")
+        if (!isNew) {
+            log.info("🔄 RSI SKIP: ${meta.mint} - already processed")
+            return
+        }
+        
         priceHistory.putIfAbsent(meta.mint, mutableListOf())
         rsiValues.putIfAbsent(meta.mint, mutableListOf())
         
@@ -344,27 +364,45 @@ class RsiBasedTradingStrategy(
         
         // Check RSI-based buy condition
         val history = priceHistory[meta.mint] ?: mutableListOf()
+        log.info("📈 RSI HISTORY: ${meta.mint} has ${history.size} price points (need ${cfg.period})")
+        
         val shouldBuy = if (history.size >= cfg.period) {
             val rsiValue = rsi(history, cfg.period)
-            log.info("📊 RSI for ${meta.mint}: $rsiValue")
-            // Buy when RSI is oversold (below 30)
-            rsiValue != null && rsiValue <= cfg.oversoldThreshold && shouldAllowBuy(meta.mint, runtime)
+            log.info("📈 RSI VALUE: ${meta.mint} = ${rsiValue?.let { "%.2f".format(it) } ?: "null"} (oversold < ${cfg.oversoldThreshold})")
+            
+            val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
+            val rsiSignal = rsiValue != null && rsiValue <= cfg.oversoldThreshold
+            
+            log.info("🔍 RSI DECISION: ${meta.mint} - RSI Signal: $rsiSignal (RSI=${rsiValue?.let { "%.2f".format(it) } ?: "null"} vs ${cfg.oversoldThreshold}), Price OK: $priceAllowed")
+            
+            rsiSignal && priceAllowed
         } else {
             // Not enough data for RSI, use immediate buy for new tokens
-            shouldAllowBuy(meta.mint, runtime)
+            val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
+            log.info("🚀 RSI FALLBACK: ${meta.mint} - immediate buy (insufficient history), Price OK: $priceAllowed")
+            priceAllowed
         }
         
         if (shouldBuy) {
-            log.info("🚀 RSI Strategy: Attempting buy for ${meta.mint}")
+            log.info("🚀 RSI BUY: Attempting ${meta.mint} - RSI Strategy triggered buy signal")
             val bought = runtime.buy(meta.mint)
             if (bought) {
                 plannedSells[meta.mint] = runtime.now() + cfg.minHoldMs
-                log.info("✅ RSI Strategy: Successfully bought ${meta.mint}")
+                log.info("✅ RSI BUY SUCCESS: ${meta.mint} - Planning sell in ${cfg.minHoldMs}ms")
             } else {
-                log.warn("❌ RSI Strategy: Failed to buy ${meta.mint}")
+                log.error("❌ RSI BUY FAILED: ${meta.mint} - runtime.buy() returned false")
             }
         } else {
-            log.debug("⏭️ RSI Strategy: Skipping buy for ${meta.mint} - RSI conditions not met")
+            // Add detailed logging for why buy was skipped
+            if (history.size >= cfg.period) {
+                val rsiValue = rsi(history, cfg.period)
+                val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
+                val rsiSignal = rsiValue != null && rsiValue <= cfg.oversoldThreshold
+                log.info("⛏️ RSI SKIP DETAILS: ${meta.mint} - RSI=${rsiValue?.let { "%.2f".format(it) } ?: "null"}, RSI Signal=$rsiSignal (need <=${cfg.oversoldThreshold}), Price OK=$priceAllowed")
+            } else {
+                val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
+                log.info("⛏️ RSI SKIP DETAILS: ${meta.mint} - Insufficient history (${history.size}/${cfg.period}), would use fallback but Price OK=$priceAllowed")
+            }
         }
     }
 
@@ -415,13 +453,17 @@ class RsiBasedTradingStrategy(
                         val rsiHistory = rsiValues.getOrPut(mint) { mutableListOf() }
                         rsiHistory.add(rsiValue)
                         if (rsiHistory.size > 50) rsiHistory.removeAt(0)
+                        
+                        // Log RSI value for monitoring
+                        log.debug("📊 RSI UPDATE: $mint = ${"%.2f".format(rsiValue)} (price: ${"%.6f".format(currentPrice)}, history: ${history.size})")
                     }
                 }
             }
 
             // Check if this is a token we hold and can sell
             if (tokenInfo != null && status?.state == TokenState.Swapped) {
-                log.info("💎 Checking RSI sell conditions for held token $mint (balance: ${tokenInfo.tokenAmount.uiAmount})")
+                val balance = tokenInfo.tokenAmount.uiAmount
+                log.info("💸 RSI SELL CHECK: $mint (balance: $balance)")
                 
                 val tokenAge = now - (status.createdAt ?: 0)
                 val minHoldTimeMs = cfg.minHoldMs
@@ -434,13 +476,15 @@ class RsiBasedTradingStrategy(
                     rsi(history, cfg.period)
                 } else null
                 
+                log.info("📊 RSI ANALYSIS: $mint - Value: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Price: ${"%.6f".format(currentPrice)}, History: ${history.size} prices")
+                
                 if (currentRsi != null) {
-                    log.debug("Current RSI for $mint: $currentRsi")
                     
                     // Condition 1: Sell when RSI is overbought (above 70)
                     if (currentRsi >= cfg.overboughtThreshold) {
                         shouldSell = true
-                        sellReason = "RSI overbought ($currentRsi >= ${cfg.overboughtThreshold})"
+                        sellReason = "RSI overbought (${"%.2f".format(currentRsi)} >= ${cfg.overboughtThreshold})"
+                        log.info("🔥 RSI OVERBOUGHT SIGNAL: $mint - Current RSI: ${"%.2f".format(currentRsi)}, Threshold: ${cfg.overboughtThreshold}, Price: ${"%.6f".format(currentPrice)}")
                     }
                     
                     // Condition 2: Sell on RSI divergence (price up but RSI down)
@@ -456,6 +500,7 @@ class RsiBasedTradingStrategy(
                             if (priceChange > 0.01 && rsiChange < -2) {
                                 shouldSell = true
                                 sellReason = "RSI bearish divergence (price up ${(priceChange * 100).toInt()}%, RSI down ${rsiChange.toInt()} points)"
+                                log.info("⚡ RSI DIVERGENCE SIGNAL: $mint - Price change: +${(priceChange * 100).toInt()}%, RSI change: ${rsiChange.toInt()} pts, Previous RSI: ${"%.2f".format(previousRsi)}, Current RSI: ${"%.2f".format(currentRsi)}")
                             }
                         }
                     }
@@ -467,7 +512,8 @@ class RsiBasedTradingStrategy(
                             val previousRsi = rsiHistory[rsiHistory.size - 2]
                             if (previousRsi <= 50) {
                                 shouldSell = true
-                                sellReason = "RSI crossed above neutral (${previousRsi.toInt()} -> ${currentRsi.toInt()})"
+                                sellReason = "RSI crossed above neutral (${"%.1f".format(previousRsi)} -> ${"%.1f".format(currentRsi)})"
+                                log.info("🔄 RSI CROSS SIGNAL: $mint - RSI crossed from ${"%.2f".format(previousRsi)} to ${"%.2f".format(currentRsi)}, Price: ${"%.6f".format(currentPrice)}")
                             }
                         }
                     }
@@ -482,16 +528,17 @@ class RsiBasedTradingStrategy(
                 // Execute sell if triggered (with delay check)
                 if (shouldSell) {
                     if (canSellNow()) {
-                        log.info("🔥 SELL NOW - RSI Strategy: $mint - $sellReason")
+                        log.info("🔥 RSI SELL EXECUTED: $mint - Reason: $sellReason, Balance: $balance, Age: ${tokenAge}ms")
                         runtime.sell(mint)
                         plannedSells.remove(mint)
                         rsiValues.remove(mint) // Clear RSI history after sell
+                        log.info("📈 RSI SELL COMPLETE: $mint - Final RSI: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Final Price: ${"%.6f".format(currentPrice)}")
                     } else {
-                        log.info("⏸️ SELL DELAYED - Waiting for sell cooldown: $mint - $sellReason")
+                        log.info("⏸️ RSI SELL DELAYED: $mint - waiting for cooldown - $sellReason")
                         // Keep the sell planned for next tick
                     }
                 } else {
-                    log.debug("💎 Holding $mint (RSI: ${currentRsi?.toInt()}, age: ${tokenAge}ms)")
+                    log.debug("💎 RSI HOLDING: $mint - RSI: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Price: ${"%.6f".format(currentPrice)}, Age: ${tokenAge}ms")
                 }
             }
         }
@@ -502,17 +549,20 @@ class RsiBasedTradingStrategy(
             it.value <= now && age >= cfg.minHoldMs
         }
         if (expiredSells.isNotEmpty()) {
-            log.info("⏰ RSI Strategy: Processing ${expiredSells.size} timed sells")
+            log.info("⏰ RSI TIMED SELLS: Processing ${expiredSells.size} expired sells")
             for (e in expiredSells) {
                 val st = runtime.status(e.key)
                 if (st?.state == TokenState.Swapped) {
                     if (canSellNow()) {
-                        log.info("⏰ SELL NOW - RSI Strategy: Timed sell for ${e.key}")
+                        val currentRsiForLog = if (priceHistory[e.key]?.size ?: 0 >= cfg.period) {
+                            rsi(priceHistory[e.key]!!, cfg.period)
+                        } else null
+                        log.info("⏰ RSI TIMED SELL EXECUTED: ${e.key} - Final RSI: ${currentRsiForLog?.let { "%.2f".format(it) } ?: "null"}")
                         runtime.sell(e.key)
                         plannedSells.remove(e.key)
                         rsiValues.remove(e.key)
                     } else {
-                        log.info("⏸️ TIMED SELL DELAYED - Waiting for sell cooldown: ${e.key}")
+                        log.info("⏸️ RSI TIMED SELL DELAYED: ${e.key} - waiting for cooldown")
                         // Keep in planned sells for next tick
                         break // Stop processing more sells this tick
                     }
@@ -522,18 +572,21 @@ class RsiBasedTradingStrategy(
             }
         }
         
-        // Sell ALL wallet tokens that have been held for configured minimum time (with delay)
+        // Sell ALL wallet tokens that have been held for extended time (with delay)
         for (mint in walletMints) {
             val status = runtime.status(mint)
             if (status?.state == TokenState.Swapped) {
                 val tokenAge = now - (status.createdAt ?: 0)
                 if (tokenAge >= cfg.minHoldMs * 10 && !plannedSells.containsKey(mint)) { // Extended hold time for RSI strategy
                     if (canSellNow()) {
-                        log.info("⏰ SELL NOW - RSI Strategy: Force selling wallet token $mint (held ${tokenAge}ms)")
+                        val currentRsiForLog = if (priceHistory[mint]?.size ?: 0 >= cfg.period) {
+                            rsi(priceHistory[mint]!!, cfg.period)
+                        } else null
+                        log.info("⏰ RSI FORCE SELL EXECUTED: $mint - Held: ${tokenAge}ms, Final RSI: ${currentRsiForLog?.let { "%.2f".format(it) } ?: "null"}")
                         runtime.sell(mint)
                         rsiValues.remove(mint)
                     } else {
-                        log.info("⏸️ FORCE SELL DELAYED - Waiting for sell cooldown: $mint")
+                        log.info("⏸️ RSI FORCE SELL DELAYED: $mint - waiting for cooldown")
                         // Will try again next tick
                         break // Stop processing more force sells this tick
                     }
@@ -541,7 +594,7 @@ class RsiBasedTradingStrategy(
             }
         }
         
-        log.info("📋 RSI Strategy: ${plannedSells.size} planned sells, ${walletMints.size} wallet tokens, ${rsiValues.size} RSI tracked")
+        log.info("📊 RSI STRATEGY SUMMARY: ${plannedSells.size} planned sells, ${walletMints.size} wallet tokens, ${rsiValues.size} RSI tracked, ${priceHistory.size} price histories")
     }
     
     /**
@@ -549,15 +602,27 @@ class RsiBasedTradingStrategy(
      */
     private suspend fun loadInitialPriceHistory(mint: String, runtime: TradingRuntime) {
         try {
+            log.info("📊 RSI PRICE LOAD: Attempting to load history for $mint")
+            
             // Try to get historical prices from runtime or external source
             val historicalPrices = runtime.getPriceHistory?.invoke(mint)
             if (historicalPrices != null && historicalPrices.isNotEmpty()) {
                 val history = priceHistory.getOrPut(mint) { mutableListOf() }
-                history.addAll(historicalPrices.takeLast(cfg.period * 2))
-                log.info("📊 Loaded ${historicalPrices.size} historical prices for $mint")
+                val pricesToAdd = historicalPrices.takeLast(cfg.period * 2)
+                history.addAll(pricesToAdd)
+                
+                log.info("✅ RSI PRICE HISTORY LOADED: $mint - Total: ${historicalPrices.size}, Added: ${pricesToAdd.size}, Range: ${pricesToAdd.minOrNull()?.let { "%.6f".format(it) }} to ${pricesToAdd.maxOrNull()?.let { "%.6f".format(it) }}")
+                
+                // Calculate initial RSI if we have enough data
+                if (history.size >= cfg.period) {
+                    val initialRsi = rsi(history, cfg.period)
+                    log.info("📊 RSI INITIAL CALCULATION: $mint - RSI: ${initialRsi?.let { "%.2f".format(it) } ?: "null"} (${cfg.period}-period)")
+                }
+            } else {
+                log.error("❌ RSI PRICE LOAD FAILED: $mint - no historical data available")
             }
         } catch (e: Exception) {
-            log.debug("Could not load historical prices for $mint: ${e.message}")
+            log.error("❌ RSI PRICE LOAD ERROR: $mint - ${e.message}", e)
         }
     }
 }

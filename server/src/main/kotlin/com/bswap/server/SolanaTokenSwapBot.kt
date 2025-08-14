@@ -19,6 +19,7 @@ import com.bswap.server.data.solana.transaction.executeSolTransaction
 import com.bswap.server.data.solana.transaction.executeSwapTransaction
 import com.bswap.server.data.solana.transaction.getTokenAccountsByOwner
 import com.bswap.server.service.JupiterTokensClient
+import com.bswap.server.service.PriceHistoryLoader
 import com.bswap.server.service.WhitelistResolver
 import com.bswap.server.stratagy.TradingStrategy
 import com.bswap.server.stratagy.TradingStrategyFactory
@@ -49,7 +50,6 @@ internal val logger = LoggerFactory.getLogger("SolanaTokenSwapBot")
 class SolanaTokenSwapBot(
     override val walletConfig: WalletConfig = WalletConfig.current(),
     override val config: SolanaSwapBotConfig = SolanaSwapBotConfig(),
-    override val getPriceHistory: (suspend (String) -> List<Double>?)? = null,
     private val executor: DefaultTransactionExecutor = DefaultTransactionExecutor(rpc),
     private val jupiterSwapService: JupiterSwapService = JupiterSwapService(client),
     private val jitoBundlerService: JitoBundlerService = JitoBundlerService(
@@ -74,6 +74,17 @@ class SolanaTokenSwapBot(
         jupiterSwapService = jupiterSwapService
     )
 ) : TradingRuntime {
+    
+    // Initialize price history loader for RSI strategy
+    private val priceHistoryLoader = PriceHistoryLoader(
+        httpClient = client,
+        dexScreenerClient = com.bswap.server.data.dexscreener.DexScreenerClientImpl(client)
+    )
+    
+    override val getPriceHistory: (suspend (String) -> List<Double>?) = { mint ->
+        priceHistoryLoader.loadPriceHistory(mint)
+    }
+    
     private val strategy: TradingStrategy = TradingStrategyFactory.create(config.strategySettings)
     private var processingTokens = AtomicInteger(0)
     private val stateMap = ConcurrentHashMap<String, TokenStatus>()
@@ -96,14 +107,14 @@ class SolanaTokenSwapBot(
     fun start() {
         if (_isActive.get()) return
         _isActive.set(true)
-        logger.info("Bot starting. Wallet: ${walletConfig.publicKey}, UseJito=${config.useJito}, SOL/Trade=${config.solAmountToTrade}")
+        logger.info("🤖 Bot started: Wallet=${walletConfig.publicKey}, Strategy=${strategy.type}")
 
         // First, clean up existing wallet tokens
         scope.launch {
             try {
                 cleanupWalletOnStartup()
             } catch (e: Exception) {
-                logger.error("Failed to cleanup wallet on startup: ${e.message}", e)
+                logger.error("❌ Wallet cleanup failed: ${e.message}", e)
             }
         }
 
@@ -112,9 +123,8 @@ class SolanaTokenSwapBot(
             scope.launch {
                 try {
                     resolver.refresh()
-                    logger.info("Whitelist initialized with ${resolver.getCacheSize()} tokens")
                 } catch (e: Exception) {
-                    logger.error("Failed to initialize whitelist: ${e.message}", e)
+                    logger.error("❌ Whitelist init failed: ${e.message}", e)
                 }
             }
         }
@@ -162,16 +172,16 @@ class SolanaTokenSwapBot(
             }
         }
 
-        // Start price miss monitoring
+        // Start price miss monitoring and cache cleanup
         scope.launch {
             while (_isActive.get()) {
                 checkPriceMisses()
                 priceMissTracker.cleanup()
+                priceHistoryLoader.cleanupCache() // Clean up expired price history cache
                 delay(10_000) // Check every 10 seconds
             }
         }
 
-        logger.info("SolanaTokenSwapBot started with strategy ${strategy.type}")
     }
 
     fun stop() {
@@ -184,7 +194,6 @@ class SolanaTokenSwapBot(
 
         // Persistent sell queue removed - no stop needed
 
-        logger.info("SolanaTokenSwapBot stopped")
     }
 
     fun isActive(): Boolean = _isActive.get()
@@ -199,36 +208,29 @@ class SolanaTokenSwapBot(
 
     fun observeProfiles(flow: Flow<List<TokenProfile>>) = scope.launch {
         flow.collect { list ->
-            if (!_isActive.get()) {
-                logger.debug("🛑 Bot not active, skipping ${list.size} profiles")
-                return@collect
-            }
+            if (!_isActive.get()) return@collect
 
             val solanaProfiles = list.filter { it.chainId == "solana" }
-            logger.info("📋 Processing ${solanaProfiles.size} Solana token profiles")
 
             solanaProfiles.forEach { p ->
-                logger.info("🔍 Discovered PROFILE token: ${p.tokenAddress}")
 
                 // Check whitelist first
                 if (whitelistResolver != null && !whitelistResolver.isAllowed(p.tokenAddress)) {
-                    logger.info("⚠️ Skip ${p.tokenAddress}: not in whitelist")
                     return@forEach
                 }
 
                 // Validate token before passing to strategy
-                logger.info("✅ Validating token: ${p.tokenAddress}")
                 val validationResult = withContext(Dispatchers.IO) {
                     tokenValidator.validateToken(p.tokenAddress)
                 }
                 if (validationResult.isValid) {
-                    logger.info("🎯 PROFILE token passed validation: ${p.tokenAddress} - sending to strategy")
+                    logger.info("✅ PROFILE validation passed: ${p.tokenAddress}")
                     strategy.onDiscovered(
                         TokenMeta(p.tokenAddress, TokenSource.PROFILE, profile = p),
                         this@SolanaTokenSwapBot
                     )
                 } else {
-                    logger.warn("❌ PROFILE: Token validation failed for ${p.tokenAddress}: ${validationResult.reasons}")
+                    logger.info("❌ PROFILE validation failed: ${p.tokenAddress} - ${validationResult.reasons}")
                 }
             }
         }
@@ -236,29 +238,22 @@ class SolanaTokenSwapBot(
 
     fun observePumpFun(flow: Flow<TokenTradeResponse>) = scope.launch {
         flow.debounce(2000).collect { t ->
-            if (!_isActive.get()) {
-                logger.debug("🛑 Bot not active, skipping PumpFun token ${t.mint}")
-                return@collect
-            }
-
-            logger.info("🚀 Discovered PUMPFUN token: ${t.mint}")
+            if (!_isActive.get()) return@collect
 
             // Check whitelist first
             if (whitelistResolver != null && !whitelistResolver.isAllowed(t.mint)) {
-                logger.info("⚠️ Skip ${t.mint}: not in whitelist")
                 return@collect
             }
 
             // Validate token before passing to strategy
-            logger.info("✅ Validating PumpFun token: ${t.mint}")
             val validationResult = withContext(Dispatchers.IO) {
                 tokenValidator.validateToken(t.mint)
             }
             if (validationResult.isValid) {
-                logger.info("🎯 PUMPFUN token passed validation: ${t.mint} - sending to strategy")
+                logger.info("✅ PUMPFUN validation passed: ${t.mint}")
                 strategy.onDiscovered(TokenMeta(t.mint, TokenSource.PUMPFUN, pump = t), this@SolanaTokenSwapBot)
             } else {
-                logger.warn("❌ PUMPFUN: Token validation failed for ${t.mint}: ${validationResult.reasons}")
+                logger.info("❌ PUMPFUN validation failed: ${t.mint} - ${validationResult.reasons}")
             }
         }
     }
@@ -269,7 +264,6 @@ class SolanaTokenSwapBot(
             list.filter { it.chainId == "solana" }.shuffled().take(5).forEach { b ->
                 // Check whitelist first
                 if (whitelistResolver != null && !whitelistResolver.isAllowed(b.tokenAddress)) {
-                    logger.debug("Skip ${b.tokenAddress}: not in whitelist")
                     return@forEach
                 }
 
@@ -282,8 +276,6 @@ class SolanaTokenSwapBot(
                         TokenMeta(b.tokenAddress, TokenSource.BOOST, boost = b),
                         this@SolanaTokenSwapBot
                     )
-                } else {
-                    logger.debug("BOOST: Token validation failed for ${b.tokenAddress}: not valid")
                 }
             }
         }
@@ -296,28 +288,20 @@ class SolanaTokenSwapBot(
     override fun status(mint: String): TokenStatus? = stateMap[mint]
 
     override suspend fun buy(mint: String): Boolean {
-        logger.info("🔥 BUY ATTEMPT: $mint")
-
         if (config.blockBuy) {
-            logger.warn("❌ BUY BLOCKED: blockBuy=true for $mint")
+            logger.error("❌ BUY BLOCKED: blockBuy=true for $mint")
             return false
         }
 
         // Check if we should allow buy without price
         if (!config.priceService.allowBuyWithoutPrice) {
-            logger.info("🔍 Checking price for $mint (allowBuyWithoutPrice=false)")
             val price = getTokenUsdPrice(mint)
             if (price == null) {
-                logger.warn("❌ BUY BLOCKED for $mint: no price available and allowBuyWithoutPrice=false")
+                logger.error("❌ BUY BLOCKED: no price for $mint")
                 return false
-            } else {
-                logger.info("✅ Price found for $mint: $$price")
             }
-        } else {
-            logger.info("⚡ Skipping price check for $mint (allowBuyWithoutPrice=true)")
         }
 
-        logger.info("🚀 EXECUTING BUY: mint=$mint, wallet=${walletConfig.publicKey}")
         stateMap[mint] = TokenStatus(mint, TokenState.TradePending)
 
         return withContext(Dispatchers.IO) {
@@ -338,38 +322,36 @@ class SolanaTokenSwapBot(
                     } else {
                         if (config.useJito) {
                             try {
-                                logger.info("BUY: Creating and enqueueing transaction for Jito")
                                 val swapTx = createSwapTransaction(swap.swapTransaction)
                                 jitoBundlerService.enqueue(swapTx)
                                 stateMap[mint]?.state = TokenState.Swapped
                                 managementService?.incrementSuccessfulTrades()
-                                logger.info("BUY: Successfully enqueued to Jito for $mint")
+                                logger.info("✅ BUY queued: $mint")
                                 true
                             } catch (e: Exception) {
-                                logger.error("BUY: Failed to create/enqueue transaction for Jito: ${e.message}", e)
-                                stateMap[mint]?.state = TokenState.SellFailed("Jito enqueue failed: ${e.message}")
+                                logger.error("❌ BUY failed: $mint - ${e.message}", e)
+                                stateMap[mint]?.state = TokenState.SellFailed("Enqueue failed: ${e.message}")
                                 managementService?.incrementFailedTrades()
                                 false
                             }
                         } else {
-                            logger.info("BUY: Executing transaction directly")
                             val success = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                             if (success) {
                                 stateMap[mint]?.state = TokenState.Swapped
                                 managementService?.incrementSuccessfulTrades()
-                                logger.info("BUY: Transaction successful for $mint")
+                                logger.info("✅ RPC BUY success: $mint")
                                 true
                             } else {
                                 stateMap[mint]?.state = TokenState.SellFailed("Swap failed")
                                 managementService?.incrementFailedTrades()
-                                logger.warn("BUY: Transaction execution failed for $mint")
+                                logger.error("❌ RPC BUY failed: $mint")
                                 false
                             }
                         }
                     }
                 },
                 onFailure = { ex ->
-                    logger.warn("BUY exception for $mint: ${ex.message}", ex)
+                    logger.error("❌ BUY exception: $mint - ${ex.message}", ex)
                     stateMap[mint]?.state = TokenState.SellFailed("Swap exception: ${ex.message}")
                     managementService?.incrementFailedTrades()
                     false
@@ -379,31 +361,23 @@ class SolanaTokenSwapBot(
     }
 
     override suspend fun sell(mint: String): Boolean {
-        logger.info("Attempting SELL: mint=$mint, wallet=${walletConfig.publicKey}")
         val status = stateMap[mint]
 
         // Check if token exists in wallet first
         val tokenInfo = tokenInfo(mint)
         if (tokenInfo == null) {
-            logger.warn("SELL: Token $mint not found in wallet")
+            logger.error("❌ SELL: Token $mint not found in wallet")
             return false
         }
 
         if (tokenInfo.tokenAmount.amount == "0") {
-            logger.warn("SELL: Token $mint has zero balance")
+            logger.error("❌ SELL: Token $mint has zero balance")
             return false
         }
 
         // If token not in state map, add it (for manual sells of existing tokens)
         if (status == null) {
-            logger.info("SELL: Adding existing token $mint to state map")
             stateMap[mint] = TokenStatus(mint, TokenState.Swapped)
-        } else {
-            // Only restrict based on state if token is tracked
-            if (status.state != TokenState.Swapped && status.state !is TokenState.SellFailed) {
-                logger.warn("SELL: Token $mint is in state ${status.state}, cannot sell")
-                // return false
-            }
         }
         stateMap[mint] = TokenStatus(mint, TokenState.Selling)
         setLastSell(mint)
@@ -421,34 +395,31 @@ class SolanaTokenSwapBot(
                     managementService?.incrementFailedTrades()
                     false
                 } else {
-                    // Test Jito with immediate flush
                     if (config.useJito) {
                         try {
-                            logger.info("SELL: Creating and enqueueing transaction for Jito")
                             val swapTx = createSwapTransaction(swap.swapTransaction)
                             jitoBundlerService.enqueue(swapTx)
                             stateMap[mint]?.state = TokenState.Sold
                             managementService?.incrementSuccessfulTrades()
-                            logger.info("SELL: Successfully enqueued to Jito for $mint")
+                            logger.info("✅ SELL queued: $mint")
                             true
                         } catch (e: Exception) {
-                            logger.error("SELL: Failed to create/enqueue transaction for Jito: ${e.message}", e)
-                            stateMap[mint]?.state = TokenState.SellFailed("Jito enqueue failed: ${e.message}")
+                            logger.error("❌ SELL failed: $mint - ${e.message}", e)
+                            stateMap[mint]?.state = TokenState.SellFailed("Enqueue failed: ${e.message}")
                             managementService?.incrementFailedTrades()
                             false
                         }
                     } else {
-                        logger.info("SELL: Executing transaction directly")
                         val sold = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                         if (sold) {
                             stateMap[mint]?.state = TokenState.Sold
                             managementService?.incrementSuccessfulTrades()
-                            logger.info("SELL: Transaction successful for $mint")
+                            logger.info("✅ RPC SELL success: $mint")
                             true
                         } else {
                             stateMap[mint]?.state = TokenState.SellFailed("Sell failed")
                             managementService?.incrementFailedTrades()
-                            logger.warn("SELL: Transaction execution failed for $mint")
+                            logger.error("❌ RPC SELL failed: $mint")
                             false
                         }
                     }
@@ -534,27 +505,30 @@ class SolanaTokenSwapBot(
                     if (swap.swapTransaction == null) return@onSuccess
                     if (config.useJito) {
                         try {
-                            logger.info("BULK SELL: Creating and enqueueing transaction for Jito - ${token.address}")
                             val swapTx = createSwapTransaction(swap.swapTransaction)
                             jitoBundlerService.enqueue(swapTx)
                             stateMap[token.address]?.state = TokenState.Sold
-                            logger.info("BULK SELL: Successfully enqueued to Jito for ${token.address}")
+                            logger.info("✅ BULK SELL: ${token.address}")
                         } catch (e: Exception) {
-                            logger.error("BULK SELL: Failed to create/enqueue transaction for Jito - ${token.address}: ${e.message}", e)
-                            stateMap[token.address]?.state = TokenState.SellFailed("Jito enqueue failed: ${e.message}")
+                            logger.error("❌ BULK SELL failed: ${token.address} - ${e.message}", e)
+                            stateMap[token.address]?.state = TokenState.SellFailed("Enqueue failed: ${e.message}")
                         }
                     } else {
                         try {
-                            logger.info("BULK SELL: Executing transaction directly via RPC - ${token.address}")
                             val sold = executeSwapTransaction(rpc, swap.swapTransaction, executor)
                             stateMap[token.address]?.state = if (sold) TokenState.Sold else TokenState.SellFailed("RPC execution failed")
-                            logger.info("BULK SELL: ${if (sold) "Successfully executed" else "Failed to execute"} via RPC for ${token.address}")
+                            if (sold) {
+                                logger.info("✅ RPC BULK SELL: ${token.address}")
+                            } else {
+                                logger.error("❌ RPC BULK SELL failed: ${token.address}")
+                            }
                         } catch (e: Exception) {
-                            logger.error("BULK SELL: Failed to execute via RPC - ${token.address}: ${e.message}", e)
+                            logger.error("❌ RPC BULK SELL error: ${token.address} - ${e.message}", e)
                             stateMap[token.address]?.state = TokenState.SellFailed("RPC execution failed: ${e.message}")
                         }
                     }
                 }.onFailure {
+                    logger.error("❌ BULK SELL error: ${token.address} - ${it.message}")
                     stateMap[token.address]?.state =
                         TokenState.SellFailed("Bulk swap error ${token.address}: ${it.message}")
                 }
@@ -591,7 +565,7 @@ class SolanaTokenSwapBot(
 
         for (mint in swappedTokens) {
             if (priceMissTracker.shouldForceSell(mint)) {
-                logger.warn("EMERGENCY_SELL $mint reason=no-price-fallback")
+                logger.error("⚠️ EMERGENCY SELL: $mint - no price data")
 
                 // Always use direct sell - no queue
                 scope.launch(Dispatchers.IO) {
@@ -606,8 +580,6 @@ class SolanaTokenSwapBot(
      * Clean up wallet on startup by selling all existing tokens except SOL
      */
     private suspend fun cleanupWalletOnStartup() {
-        logger.info("🧹 Starting wallet cleanup - selling all existing tokens...")
-
         try {
             val existingTokens = allTokens()
                 .filterNot { it.address == config.swapMint.base58() } // Keep SOL
@@ -617,44 +589,38 @@ class SolanaTokenSwapBot(
                 }
 
             if (existingTokens.isEmpty()) {
-                logger.info("✅ Wallet is already clean - no tokens to sell")
                 return
             }
 
-            logger.info("🎯 Found ${existingTokens.size} existing tokens to sell before starting discovery")
+            logger.info("🧹 CLEANUP: Found ${existingTokens.size} wallet tokens to sell")
 
             existingTokens.forEach { token ->
                 try {
-                    logger.info("💰 Startup cleanup: Selling existing token ${token.address} (balance: ${token.tokenAmount.uiAmount})")
-
                     // Add to state map for tracking
                     stateMap[token.address] = TokenStatus(token.address, TokenState.Swapped)
 
                     // Execute sell directly (don't use queue during startup)
                     val success = sell(token.address)
                     if (success) {
-                        logger.info("✅ Successfully queued ${token.address} for sale")
+                        logger.info("✅ CLEANUP: Queued ${token.address} for sale")
                     } else {
-                        logger.warn("⚠️ Failed to sell ${token.address} during startup cleanup")
+                        logger.error("❌ CLEANUP: Failed to sell ${token.address}")
                     }
 
                     // Minimal delay between sells
                     delay(100)
 
                 } catch (e: Exception) {
-                    logger.error("❌ Error selling token ${token.address} during startup: ${e.message}", e)
+                    logger.error("❌ CLEANUP ERROR: ${token.address} - ${e.message}", e)
                 }
             }
 
             // Short wait for sales to process before allowing new discovery
-            logger.info("⏱️ Waiting 3 seconds for startup sells to process...")
             delay(3_000)
-
-            logger.info("🎉 Wallet cleanup completed - bot ready for new token discovery")
+            logger.info("✅ CLEANUP: Completed wallet cleanup")
 
         } catch (e: Exception) {
-            logger.error("❌ Critical error during wallet cleanup: ${e.message}", e)
-            // Don't fail startup entirely, just log the error
+            logger.error("❌ CLEANUP FAILED: ${e.message}", e)
         }
     }
 
@@ -672,7 +638,8 @@ class SolanaTokenSwapBot(
             "enhancedSellQueueEnabled" to true,
             "rpcUrl" to RPC_URL,
             "priceMissStats" to priceMissTracker.getStats(),
-            "priceServiceStats" to priceService.getCacheStats()
+            "priceServiceStats" to priceService.getCacheStats(),
+            "priceHistoryStats" to priceHistoryLoader.getCacheStats()
         )
     }
 }

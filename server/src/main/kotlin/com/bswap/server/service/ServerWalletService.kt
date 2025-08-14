@@ -328,7 +328,7 @@ class ServerWalletService(
                 )
             }
 
-            logger.info("Getting balance for bot wallet: $botPublicKey")
+           // logger.info("Getting balance for bot wallet: $botPublicKey")
             return@withContext getWalletBalance(botPublicKey)
         } catch (e: Exception) {
             logger.error("Failed to get bot wallet balance", e)

@@ -42,14 +42,12 @@ suspend fun createSwapTransaction(
     base64: String,
 ): ByteArray {
     try {
-        println("createSwapTransaction: Starting transaction creation")
 
         // Validate private key format
         if (privateKey.isBlank()) {
             throw IllegalStateException("Private key is empty or blank")
         }
 
-        println("createSwapTransaction: Private key length: ${privateKey.length} characters")
 
         // Decode private key from base58
         val decodedPrivateKey = try {
@@ -60,7 +58,6 @@ suspend fun createSwapTransaction(
             throw IllegalStateException("Unexpected error decoding private key: ${e.message}", e)
         }
 
-        println("createSwapTransaction: Decoded private key length: ${decodedPrivateKey.size} bytes")
 
         // Validate decoded key length
         if (decodedPrivateKey.size < 32) {
@@ -69,7 +66,6 @@ suspend fun createSwapTransaction(
 
         // Extract the 32-byte secret key (first 32 bytes)
         val secretKey = decodedPrivateKey.copyOfRange(0, 32)
-        println("createSwapTransaction: Secret key extracted (32 bytes)")
 
         // Create keypair from secret key
         val k = try {
@@ -77,28 +73,17 @@ suspend fun createSwapTransaction(
         } catch (e: Exception) {
             throw IllegalStateException("Failed to create keypair from secret key: ${e.message}", e)
         }
-        println("createSwapTransaction: Keypair created successfully")
 
-        println("createSwapTransaction: Creating sol4k keypair from secret")
         val sender = org.sol4k.Keypair.fromSecretKey(k.secretKey)
-        println("createSwapTransaction: Sol4k keypair created successfully")
 
-        println("createSwapTransaction: Parsing transaction from base64")
         val transaction = VersionedTransaction.from(base64)
-        println("createSwapTransaction: Transaction parsed successfully")
 
-        println("createSwapTransaction: Signing transaction")
         transaction.sign(sender)
-        println("createSwapTransaction: Transaction signed successfully")
 
-        println("createSwapTransaction: Serializing transaction")
         val serialized = transaction.serialize()
-        println("createSwapTransaction: Transaction serialized successfully, size: ${serialized.size} bytes")
 
         return serialized
     } catch (e: Exception) {
-        println("createSwapTransaction: ERROR - ${e.message}")
-        e.printStackTrace()
         throw e
     }
 }
@@ -202,16 +187,12 @@ class DefaultTransactionExecutor(
     suspend fun executeAndConfirm(
         transaction: Transaction,
     ): TransactionExecutionResult {
-        println("Executing transaction...")
 
         return try {
             val signature = execute(transaction)
             val signString = signature.encodeToBase58String()
-            println("Transaction signature: $signString")
-            println("Confirming transaction...")
             confirm(signature)
         } catch (e: Exception) {
-            println("Transaction failed Exception $e")
             TransactionExecutionResult(false, null)
         }
     }
@@ -219,16 +200,12 @@ class DefaultTransactionExecutor(
     suspend fun executeAndConfirm(
         transaction: SerializedTransaction,
     ): TransactionExecutionResult {
-        println("Executing transaction...")
 
         return try {
             val signature = execute(transaction)
             val signString = signature.encodeToBase58String()
-            println("Transaction signature: $signString")
-            println("Confirming transaction...")
             confirm(signature)
         } catch (e: Exception) {
-            println("Transaction failed Exception $e")
             TransactionExecutionResult(false, null)
         }
     }
@@ -264,10 +241,8 @@ class DefaultTransactionExecutor(
         val transactionSignatureList = transactionSignature.toList()
 
         return if (transactionSignatureList.isNotEmpty()) {
-            println("Transaction succeed \uD83D\uDD25")
             TransactionExecutionResult(true)
         } else {
-            println("Transaction failed $transactionSignatureList")
             TransactionExecutionResult(
                 false,
                 "Transaction failed: $transactionSignatureList"
