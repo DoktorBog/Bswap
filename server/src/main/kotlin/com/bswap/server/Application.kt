@@ -148,7 +148,6 @@ val client by lazy {
         engine {
             // Configure connection timeouts (increased for better reliability)
             requestTimeout = 60_000 // 60 seconds
-            connectTimeout = 30_000 // 30 seconds connect timeout
             
             // Connection pooling
             maxConnectionsCount = 100
@@ -156,9 +155,9 @@ val client by lazy {
         
         // Add timeout handling
         install(io.ktor.client.plugins.HttpTimeout) {
-            requestTimeoutMillis = 30_000
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = 30_000
+            requestTimeoutMillis = 60_000 // 60 seconds
+            connectTimeoutMillis = 30_000  // 30 seconds connect timeout
+            socketTimeoutMillis = 30_000   // 30 seconds socket timeout
         }
     }
 }
