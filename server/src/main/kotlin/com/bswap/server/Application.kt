@@ -146,8 +146,9 @@ val client by lazy {
             json(Json { ignoreUnknownKeys = true })
         }
         engine {
-            // Configure connection timeouts
-            requestTimeout = 30_000 // 30 seconds
+            // Configure connection timeouts (increased for better reliability)
+            requestTimeout = 60_000 // 60 seconds
+            connectTimeout = 30_000 // 30 seconds connect timeout
             
             // Connection pooling
             maxConnectionsCount = 100

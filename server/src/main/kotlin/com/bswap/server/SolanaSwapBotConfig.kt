@@ -213,7 +213,7 @@ data class PriceServiceConfig(
     val sellOnPriceMissing: Boolean = false,
     val priceMissingMaxStrikes: Int = 4,
     val priceMissingWindowMs: Long = 60_000L,
-    val allowBuyWithoutPrice: Boolean = false
+    val allowBuyWithoutPrice: Boolean = true  // Enable for RSI strategy with synthetic data
 )
 
 data class WhitelistConfig(

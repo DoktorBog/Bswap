@@ -372,10 +372,11 @@ class RsiBasedTradingStrategy(
             
             val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
             val rsiSignal = rsiValue != null && rsiValue <= cfg.oversoldThreshold
+            val buyDecision = rsiSignal && priceAllowed
             
-            log.info("🔍 RSI DECISION: ${meta.mint} - RSI Signal: $rsiSignal (RSI=${rsiValue?.let { "%.2f".format(it) } ?: "null"} vs ${cfg.oversoldThreshold}), Price OK: $priceAllowed")
+            log.info("🔍 RSI DECISION: ${meta.mint} - RSI Signal: $rsiSignal (RSI=${rsiValue?.let { "%.2f".format(it) } ?: "null"} vs ${cfg.oversoldThreshold}), Price OK: $priceAllowed, Final Decision: $buyDecision")
             
-            rsiSignal && priceAllowed
+            buyDecision
         } else {
             // Not enough data for RSI, use immediate buy for new tokens
             val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
