@@ -62,5 +62,18 @@ private fun getGlobalClient(): HttpClient {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
         }
+        engine {
+            // Connection pooling - reduced to prevent memory issues
+            maxConnectionsCount = 25
+            requestTimeout = 15_000
+            pipelining = false
+        }
+        
+        // Add timeout handling
+        install(io.ktor.client.plugins.HttpTimeout) {
+            requestTimeoutMillis = 15_000
+            connectTimeoutMillis = 10_000
+            socketTimeoutMillis = 10_000
+        }
     }
 }

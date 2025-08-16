@@ -32,4 +32,28 @@ actual object SeedToWalletConverter {
     ): WalletConfig {
         return fromSeedPhrase(seedPhrase.split(" "), accountIndex, passphrase)
     }
+    
+    actual fun getEthereumAddress(
+        seedPhrase: String,
+        accountIndex: Int,
+        passphrase: String
+    ): String {
+        val wallet = HDWallet(seedPhrase, passphrase)
+        val privateKey = wallet.getKey(CoinType.ETHEREUM, "m/44'/60'/${accountIndex}'/0/0")
+        val publicKey = privateKey.getPublicKeySecp256k1(false)
+        
+        // Get address from public key
+        val address = wallet.getAddressForCoin(CoinType.ETHEREUM)
+        return address
+    }
+    
+    actual fun getEthereumPrivateKey(
+        seedPhrase: String,
+        accountIndex: Int,
+        passphrase: String
+    ): String {
+        val wallet = HDWallet(seedPhrase, passphrase)
+        val privateKey = wallet.getKey(CoinType.ETHEREUM, "m/44'/60'/${accountIndex}'/0/0")
+        return "0x" + privateKey.data().joinToString("") { "%02x".format(it) }
+    }
 }

@@ -12,6 +12,7 @@ import com.bswap.server.routes.botRoutes
 import com.bswap.server.routes.commandRoutes
 import com.bswap.server.routes.startRoute
 import com.bswap.server.routes.tokensRoute
+import com.bswap.server.routes.tradingRoutes
 import com.bswap.server.routes.walletRoutes
 import com.bswap.server.service.BotManagementService
 import com.bswap.server.service.PriceService
@@ -20,6 +21,10 @@ import com.bswap.server.service.TokenMetadataService
 import com.bswap.server.service.WalletService
 import com.bswap.server.validation.TokenValidator
 import com.bswap.server.validation.ValidationConfig
+import com.bswap.server.config.HyperliquidConfig
+import com.bswap.server.config.EnhancedTradingConfig
+import com.bswap.server.config.ExchangeType
+import com.bswap.server.service.UnifiedTradingService
 import com.bswap.shared.wallet.WalletInitializer
 import com.bswap.shared.wallet.SeedToWalletConverter
 import foundation.metaplex.rpc.RPC
@@ -43,12 +48,69 @@ import kotlinx.serialization.json.Json
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 
 fun main() {
-    // Prompt for seed phrase interactively on server start
-    val seedPhrase = prompt("Enter your 12/24-word seed phrase (single line): ")
+    // First setup wallet
+    println("═══════════════════════════════════════════════════")
+    println("        🔐 WALLET SETUP")
+    println("═══════════════════════════════════════════════════")
+    println()
+    println("Setting up wallet from seed phrase...")
+    val seedPhrase = "position pluck puzzle unable cupboard sausage response blossom witness legend jar salt"
     require(seedPhrase.isNotBlank()) { "Seed phrase is required" }
     val wallet = WalletInitializer.initializeFromSeed(seedPhrase)
-    println("Wallet initialized. Public Key: ${wallet.publicKey}")
+    println("✅ Solana wallet initialized. Public Key: ${wallet.publicKey}")
     privateKey = wallet.privateKey
+
+    // Derive ETH address and private key from the same seed phrase
+    val ethAddress = SeedToWalletConverter.getEthereumAddress(seedPhrase)
+    val ethPrivateKey = SeedToWalletConverter.getEthereumPrivateKey(seedPhrase)
+    println("✅ Ethereum wallet derived. Address: $ethAddress")
+    println()
+    
+    // Display exchange selection menu
+    println("═══════════════════════════════════════════════════")
+    println("     🚀 BSWAP TRADING BOT - EXCHANGE SELECTION")
+    println("═══════════════════════════════════════════════════")
+    println()
+    println("Select trading exchange:")
+    println("1. Solana DEX (Raydium, Jupiter)")
+    println("2. Hyperliquid (Perpetuals & Spot)")
+    println()
+    val exchangeChoice = prompt("Enter choice (1 or 2) [default: 2]: ").ifBlank { "2" }
+    
+    val useHyperliquid = exchangeChoice == "2"
+    val exchangeType = if (useHyperliquid) ExchangeType.HYPERLIQUID else ExchangeType.SOLANA
+    
+    println()
+    println("Selected: ${if (useHyperliquid) "Hyperliquid" else "Solana DEX"}")
+    println()
+    
+    // Get initial Hyperliquid config (simplified - no API keys for now)
+    var hyperliquidConfig = if (useHyperliquid) {
+        println("═══════════════════════════════════════════════════")
+        println("        HYPERLIQUID CONFIGURATION")
+        println("═══════════════════════════════════════════════════")
+        println()
+        
+        val leverage = prompt("Enter default leverage (1-20) [default: 1]: ").toDoubleOrNull() ?: 1.0
+        val testnet = prompt("Use testnet? (y/n) [default: n]: ").equals("y", ignoreCase = true)
+        
+        println("Using derived ETH wallet for Hyperliquid trading...")
+        
+        HyperliquidConfig(
+            enabled = true,
+            exchangeType = ExchangeType.HYPERLIQUID,
+            apiKey = "", // Removed for now
+            apiSecret = "", // Removed for now
+            walletAddress = ethAddress,
+            privateKey = ethPrivateKey,
+            defaultLeverage = leverage,
+            testnet = testnet,
+            logAllTrades = true,
+            logBalanceChanges = true
+        )
+    } else {
+        HyperliquidConfig(enabled = false, exchangeType = ExchangeType.SOLANA)
+    }
 
     // Initialize services
     val tokenValidator = TokenValidator(client, ValidationConfig())
@@ -59,6 +121,45 @@ fun main() {
     val serverWalletService = ServerWalletService(tokenValidator, solanaRpcClient, priceService)
     val botManagementService = BotManagementService(serverWalletService, priceService)
     val commandProcessor = com.bswap.server.command.CommandProcessor(botManagementService, serverWalletService, priceService)
+    
+    // Initialize Unified Trading Service
+    val enhancedConfig = EnhancedTradingConfig() // Use default config or load from file
+    val unifiedTradingService = UnifiedTradingService(
+        solanaConfig = botManagementService.bot.config,
+        hyperliquidConfig = hyperliquidConfig,
+        enhancedConfig = enhancedConfig,
+        runtime = if (!useHyperliquid) botManagementService.bot else null
+    )
+    
+    // Start trading if Hyperliquid is selected
+    if (useHyperliquid) {
+        println()
+        println("═══════════════════════════════════════════════════")
+        println("        STARTING HYPERLIQUID TRADING")
+        println("═══════════════════════════════════════════════════")
+        appScope.launch {
+            delay(3000) // Give services time to initialize
+            unifiedTradingService.startTrading()
+            
+            // Monitor and display stats
+            while (true) {
+                delay(30000) // Every 30 seconds
+                try {
+                    val stats = unifiedTradingService.getStats()
+                    val (unrealizedPnL, realizedPnL) = unifiedTradingService.getPnL()
+                    println()
+                    println("📊 Trading Stats Update:")
+                    println("  Exchange: ${stats["exchange"]}")
+                    println("  Active Positions: ${stats["activePositions"] ?: 0}")
+                    println("  Unrealized PnL: $$unrealizedPnL")
+                    println("  Realized PnL: $$realizedPnL")
+                    println("  Account Balance: $${stats["accountBalance"] ?: 0.0}")
+                } catch (e: Exception) {
+                    println("Error getting stats: ${e.message}")
+                }
+            }
+        }
+    }
 
     // Pre-populate wallet cache immediately after wallet initialization
     // DISABLED: Turn off history fetch for now
@@ -84,9 +185,9 @@ fun main() {
     val pumpFun = PumpFunService
     pumpFun.connect()
     botManagementService.bot.observePumpFun(pumpFun.observeEvents())
-    dexScreenerRepository.startAutoRefreshAll()
-    botManagementService.bot.observeProfiles(dexScreenerRepository.tokenProfilesFlow)
-    botManagementService.bot.observeBoosted(dexScreenerRepository.topBoostedTokensFlow)
+    //dexScreenerRepository.startAutoRefreshAll()
+    //botManagementService.bot.observeProfiles(dexScreenerRepository.tokenProfilesFlow)
+    //botManagementService.bot.observeBoosted(dexScreenerRepository.topBoostedTokensFlow)
     embeddedServer(Netty, port = SERVER_PORT) {
         install(ContentNegotiation) {
             json(Json { ignoreUnknownKeys = true })
@@ -98,6 +199,7 @@ fun main() {
             walletRoutes(serverWalletService, tokenMetadataService, priceService)
             botRoutes(botManagementService)
             commandRoutes(commandProcessor)
+            tradingRoutes(unifiedTradingService)
         }
     }.start(wait = true)
 }
@@ -147,17 +249,20 @@ val client by lazy {
         }
         engine {
             // Configure connection timeouts (increased for better reliability)
-            requestTimeout = 60_000 // 60 seconds
+            requestTimeout = 30_000 // 30 seconds
+
+            // Connection pooling - reduced to prevent memory issues
+            maxConnectionsCount = 50
             
-            // Connection pooling
-            maxConnectionsCount = 100
+            // Additional memory management
+            pipelining = false
         }
-        
+
         // Add timeout handling
         install(io.ktor.client.plugins.HttpTimeout) {
-            requestTimeoutMillis = 60_000 // 60 seconds
-            connectTimeoutMillis = 30_000  // 30 seconds connect timeout
-            socketTimeoutMillis = 30_000   // 30 seconds socket timeout
+            requestTimeoutMillis = 30_000 // 30 seconds
+            connectTimeoutMillis = 15_000  // 15 seconds connect timeout
+            socketTimeoutMillis = 15_000   // 15 seconds socket timeout
         }
     }
 }

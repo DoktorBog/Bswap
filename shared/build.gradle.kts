@@ -21,6 +21,11 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.sol4k)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
             }
         }
         val commonTest by getting {
@@ -32,12 +37,14 @@ kotlin {
             dependencies {
                 implementation(libs.sol4k)
                 implementation("org.bouncycastle:bcprov-jdk15on:1.70")
+                implementation(libs.ktor.client.cio)
             }
         }
         val androidMain by getting {
             dependencies {
                 implementation(libs.wallet.core)
                 implementation(libs.sol4k)
+                implementation(libs.ktor.client.okhttp)
             }
         }
         if (enableWasm) {

@@ -12,10 +12,18 @@ plugins {
 }
 
 kotlin {
-    androidTarget()
+    androidTarget {
+        compilerOptions {
+            freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+        }
+    }
     jvmToolchain(17)
 
-    jvm("desktop")
+    jvm("desktop") {
+        compilerOptions {
+            freeCompilerArgs.add("-opt-in=androidx.compose.material3.ExperimentalMaterial3Api")
+        }
+    }
 
     if (project.findProperty("enableWasm") == "true") {
         wasmJs {

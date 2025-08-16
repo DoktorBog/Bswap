@@ -29,4 +29,30 @@ expect object SeedToWalletConverter {
         accountIndex: Int = 0,
         passphrase: String = ""
     ): WalletConfig
+    
+    /**
+     * Derives Ethereum address from seed phrase
+     * @param seedPhrase Space-separated mnemonic words
+     * @param accountIndex The account index for derivation (default: 0)
+     * @param passphrase Optional passphrase for BIP39 seed generation
+     * @return Ethereum address (0x...)
+     */
+    fun getEthereumAddress(
+        seedPhrase: String,
+        accountIndex: Int = 0,
+        passphrase: String = ""
+    ): String
+    
+    /**
+     * Derives Ethereum private key from seed phrase
+     * @param seedPhrase Space-separated mnemonic words
+     * @param accountIndex The account index for derivation (default: 0)
+     * @param passphrase Optional passphrase for BIP39 seed generation
+     * @return Ethereum private key (0x...)
+     */
+    fun getEthereumPrivateKey(
+        seedPhrase: String,
+        accountIndex: Int = 0,
+        passphrase: String = ""
+    ): String
 }

@@ -10,7 +10,11 @@ version = "1.0.0"
 application {
     mainClass.set("com.bswap.server.ApplicationKt")
     applicationDefaultJvmArgs =
-        listOf("-Dio.ktor.development=${extra["io.ktor.development"] ?: "false"}")
+        listOf(
+            "-Dio.ktor.development=${extra["io.ktor.development"] ?: "false"}",
+            "-Xmx4g",
+            "-Xms1g"
+        )
 }
 
 // Allow interactive input when running via `./gradlew :server:run`
@@ -53,6 +57,9 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.46.1.0")
 
     implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")   // актуальная на август 2025
+    
+    // For Hyperliquid exchange integration - using HTTP client directly
+    // CCXT library not available in Maven Central, we'll use direct API implementation
 }
 
 // Exclude Android-only wallet-core AAR when resolving JVM server configurations

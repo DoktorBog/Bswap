@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,6 +81,7 @@ fun BotDashboardScreen(
     onNavigateToWallet: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToAlerts: () -> Unit,
+    onNavigateToTrading: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var botStatus by remember { mutableStateOf<BotStatus?>(null) }
@@ -227,7 +229,8 @@ fun BotDashboardScreen(
                             onNavigateToAnalytics = onNavigateToAnalytics,
                             onNavigateToWallet = onNavigateToWallet,
                             onNavigateToHistory = onNavigateToHistory,
-                            onNavigateToAlerts = onNavigateToAlerts
+                            onNavigateToAlerts = onNavigateToAlerts,
+                            onNavigateToTrading = onNavigateToTrading
                         )
                     }
                 }
@@ -490,7 +493,8 @@ fun ModernNavigationGrid(
     onNavigateToAnalytics: () -> Unit,
     onNavigateToWallet: () -> Unit,
     onNavigateToHistory: () -> Unit,
-    onNavigateToAlerts: () -> Unit
+    onNavigateToAlerts: () -> Unit,
+    onNavigateToTrading: () -> Unit = {}
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -569,18 +573,37 @@ fun ModernNavigationGrid(
                 )
             }
 
-            ActionCard(
-                title = "Alerts & Notifications",
-                subtitle = "",
-                icon = {
-                    Icon(
-                        Icons.Default.Notifications,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                },
-                onClick = onNavigateToAlerts
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ActionCard(
+                    title = "Trading",
+                    subtitle = "Advanced Trading",
+                    icon = {
+                        Icon(
+                            Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    },
+                    onClick = onNavigateToTrading,
+                    modifier = Modifier.weight(1f)
+                )
+                ActionCard(
+                    title = "Alerts",
+                    subtitle = "Notifications",
+                    icon = {
+                        Icon(
+                            Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    },
+                    onClick = onNavigateToAlerts,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
 }

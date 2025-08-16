@@ -10,7 +10,7 @@ import java.math.BigDecimal
 
 data class SolanaSwapBotConfig(
     val swapMint: PublicKey = PublicKey("So11111111111111111111111111111111111111112"),
-    val solAmountToTrade: BigDecimal = BigDecimal("0.0053"),
+    val solAmountToTrade: BigDecimal = BigDecimal("0.0026"),  // Smaller amounts for more trades
     val autoSellAllSpl: Boolean = true,
     val sellAllSplIntervalMs: Long = 60_000 * 3,
     val closeAccountsIntervalMs: Long = 60_000,
@@ -20,9 +20,9 @@ data class SolanaSwapBotConfig(
     val useJito: Boolean = true,
     val validationMaxRisk: Double = 0.7,
     val maxKnownTokens: Int = 1000,
-    val strategySettings: TradingStrategySettings = TradingStrategySettings(),
-    val strategyTickMs: Long = 2000,   // Slower strategy ticks to reduce RPC calls
-    val blockBuy: Boolean = false,  // Allow buying
+    val strategySettings: TradingStrategySettings = TradingStrategySettings(type = StrategyType.SHITCOIN_SCALPER),
+    val strategyTickMs: Long = 500,    // Ultra fast strategy ticks for scalping
+    val blockBuy: Boolean = false,  // Allow buying - ENABLED for new token discovery
 
     // Sell queue configuration
     val sellQueue: SellQueueConfig = SellQueueConfig(),
@@ -34,10 +34,13 @@ data class SolanaSwapBotConfig(
     val priceService: PriceServiceConfig = PriceServiceConfig(),
 
     // Whitelist configuration
-    val whitelist: WhitelistConfig = WhitelistConfig(),
-    
+    val whitelist: WhitelistConfig = WhitelistConfig(enabled = false),
+
     // Whitelist buy observer configuration
-    val whitelistBuyObserver: WhitelistBuyObserverConfig = WhitelistBuyObserverConfig()
+    val whitelistBuyObserver: WhitelistBuyObserverConfig = WhitelistBuyObserverConfig(enabled = false),
+
+    // New token discovery limits
+    val maxActiveTokens: Int = 10  // Maximum tokens to hold at once
 )
 
 sealed interface TokenState {
@@ -65,7 +68,8 @@ enum class StrategyType {
     BOLLINGER_MEAN_REVERSION,
     MOMENTUM,
     TECHNICAL_ANALYSIS_COMBINED,
-    WALLET_SELL_ONLY
+    WALLET_SELL_ONLY,
+    SHITCOIN_SCALPER
 }
 
 data class ImmediateConfig(
@@ -144,7 +148,7 @@ data class TechnicalAnalysisConfig(
 )
 
 data class TradingStrategySettings(
-    val type: StrategyType = StrategyType.RSI_BASED,
+    val type: StrategyType = StrategyType.WALLET_SELL_ONLY,
     val immediate: ImmediateConfig = ImmediateConfig(),
     val delayed: DelayedEntryConfig = DelayedEntryConfig(),
     val batch: BatchAccumulateConfig = BatchAccumulateConfig(),
@@ -155,7 +159,8 @@ data class TradingStrategySettings(
     val bollingerMeanReversion: BollingerMeanReversionConfig = BollingerMeanReversionConfig(),
     val momentum: MomentumConfig = MomentumConfig(),
     val technicalAnalysis: TechnicalAnalysisConfig = TechnicalAnalysisConfig(),
-    val walletSellOnly: WalletSellOnlyConfig = WalletSellOnlyConfig()
+    val walletSellOnly: WalletSellOnlyConfig = WalletSellOnlyConfig(),
+    val shitcoinScalper: ShitcoinScalperConfig = ShitcoinScalperConfig()
 )
 
 data class WalletSellOnlyConfig(
@@ -168,6 +173,29 @@ data class WalletSellOnlyConfig(
         "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC
         "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"  // USDT
     )
+)
+
+data class ShitcoinScalperConfig(
+    val maxHoldTimeMs: Long = 45_000L,      // Hold up to 45 seconds for better profit opportunity
+    val profitTakePercent: Double = 0.02,   // Take profit at 2% (more reasonable target)
+    val stopLossPercent: Double = 0.08,     // Stop loss at 8% (less aggressive, allows for volatility)
+    val emergencyStopLoss: Double = 0.15,   // Emergency stop at 15% to prevent major losses
+    val volumeCheckIntervalMs: Long = 2_000L, // Check volume every 2 seconds (less frequent)
+    val minVolumeIncrease: Double = 0.15,   // 15% volume increase triggers sell
+    val priceMovementThreshold: Double = 0.03, // 3% price movement triggers sell
+    val onlyPumpTokens: Boolean = true,     // Focus on pump.fun tokens for better liquidity
+    val qtyFraction: Double = 1.0,
+    val fastExitOnActivity: Boolean = true, // Sell when others start buying
+    val maxTokensHeld: Int = 10,           // Maximum concurrent positions
+    val onlyNewTokens: Boolean = true,     // Only buy newly discovered tokens
+    val validatePools: Boolean = false,    // Disable pool validation for faster new token discovery
+
+    // Smart exit parameters
+    val trendAnalysisWindow: Int = 8,       // Look at last 8 price points for trend
+    val minProfitBeforeTrailing: Double = 0.005, // 0.5% profit before enabling trailing stop
+    val trailingStopPercent: Double = 0.03, // 3% trailing stop from peak
+    val consolidationTimeMs: Long = 10_000L, // If flat for 10 seconds, consider exit
+    val consolidationThreshold: Double = 0.01 // 1% range considered "flat"
 )
 
 enum class TokenSource {
@@ -234,7 +262,7 @@ data class WhitelistConfig(
 )
 
 data class WhitelistBuyObserverConfig(
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val observationIntervalMs: Long = 10000, // Check every 10 seconds
     val priceChangeThreshold: Double = 0.05, // 5% price increase threshold
     val volumeThreshold: Double = 50000.0, // Minimum volume threshold

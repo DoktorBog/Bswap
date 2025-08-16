@@ -14,6 +14,7 @@ import com.bswap.server.ImmediateConfig
 import com.bswap.server.MomentumConfig
 import com.bswap.server.PumpFunPriorityConfig
 import com.bswap.server.RsiBasedConfig
+import com.bswap.server.ShitcoinScalperConfig
 import com.bswap.server.SmaCrossConfig
 import com.bswap.server.StrategyType
 import com.bswap.server.TechnicalAnalysisConfig
@@ -100,7 +101,7 @@ abstract class BaseStrategy(
         }
         return true
     }
-    
+
     /**
      * RSI-specific price check - more permissive for strategy that uses synthetic data
      */
@@ -152,6 +153,7 @@ object TradingStrategyFactory {
             StrategyType.MOMENTUM -> MomentumTradingStrategy(settings.momentum)
             StrategyType.TECHNICAL_ANALYSIS_COMBINED -> TechnicalAnalysisCombinedStrategy(settings.technicalAnalysis)
             StrategyType.WALLET_SELL_ONLY -> WalletSellOnlyStrategy(settings.walletSellOnly)
+            StrategyType.SHITCOIN_SCALPER -> ShitcoinScalperStrategy(settings.shitcoinScalper)
         }
     }
 
@@ -330,38 +332,38 @@ class RsiBasedTradingStrategy(
     private val plannedSells = ConcurrentHashMap<String, Long>()
     private val priceHistory = ConcurrentHashMap<String, MutableList<Double>>()
     private val rsiValues = ConcurrentHashMap<String, MutableList<Double>>()
-    
+
     // NO SELL DELAY - RSI strategy sells immediately when signal triggers
 
     override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
         val isNew = runtime.isNew(meta.mint)
         log.info("🏢 RSI DISCOVER: ${meta.mint} (${meta.source}) - IsNew: $isNew")
-        
+
         if (!isNew) {
             log.info("🔄 RSI SKIP: ${meta.mint} - already processed")
             return
         }
-        
+
         priceHistory.putIfAbsent(meta.mint, mutableListOf())
         rsiValues.putIfAbsent(meta.mint, mutableListOf())
-        
+
         // Load initial price history for RSI calculation
         loadInitialPriceHistory(meta.mint, runtime)
-        
+
         // Check RSI-based buy condition
         val history = priceHistory[meta.mint] ?: mutableListOf()
         log.info("📈 RSI HISTORY: ${meta.mint} has ${history.size} price points (need ${cfg.period})")
-        
+
         val shouldBuy = if (history.size >= cfg.period) {
             val rsiValue = rsi(history, cfg.period)
             log.info("📈 RSI VALUE: ${meta.mint} = ${rsiValue?.let { "%.2f".format(it) } ?: "null"} (oversold < ${cfg.oversoldThreshold})")
-            
+
             val priceAllowed = shouldAllowRsiBuy(meta.mint, runtime)
             val rsiSignal = rsiValue != null && rsiValue <= cfg.oversoldThreshold
             val buyDecision = rsiSignal && priceAllowed
-            
+
             log.info("🔍 RSI DECISION: ${meta.mint} - RSI Signal: $rsiSignal (RSI=${rsiValue?.let { "%.2f".format(it) } ?: "null"} vs ${cfg.oversoldThreshold}), Price OK: $priceAllowed, Final Decision: $buyDecision")
-            
+
             buyDecision
         } else {
             // Not enough data for RSI, use immediate buy for new tokens
@@ -369,7 +371,7 @@ class RsiBasedTradingStrategy(
             log.info("🚀 RSI FALLBACK: ${meta.mint} - immediate buy (insufficient history), Price OK: $priceAllowed")
             priceAllowed
         }
-        
+
         if (shouldBuy) {
             log.info("🚀 RSI BUY: Attempting ${meta.mint} - RSI Strategy triggered buy signal")
             val bought = runtime.buy(meta.mint)
@@ -395,16 +397,16 @@ class RsiBasedTradingStrategy(
 
     override suspend fun onTick(runtime: TradingRuntime) {
         val now = runtime.now()
-        
+
         // Update wallet universe for comprehensive tracking
         updateWalletUniverse(runtime)
 
         // Get all tokens in wallet - these are the ones we can sell
-        val walletTokens = runtime.allTokens().filter { 
-            it.tokenAmount.uiAmount != null && it.tokenAmount.uiAmount > 0.0 
+        val walletTokens = runtime.allTokens().filter {
+            it.tokenAmount.uiAmount != null && it.tokenAmount.uiAmount > 0.0
         }
         val walletMints = walletTokens.map { it.address }.toSet()
-        
+
         // Include discovered tokens for price tracking
         val universe = priceHistory.keys + walletMints
 
@@ -415,7 +417,7 @@ class RsiBasedTradingStrategy(
             val history = priceHistory.getOrPut(mint) { mutableListOf() }
             val tokenInfo = walletTokens.firstOrNull { it.address == mint }
             val status = runtime.status(mint)
-            
+
             // Try to get current price, but don't fail if unavailable
             val currentPrice = try {
                 if (tokenInfo != null) {
@@ -432,7 +434,7 @@ class RsiBasedTradingStrategy(
             if (currentPrice > 0.0) {
                 history.add(currentPrice)
                 if (history.size > cfg.period * 2) history.removeAt(0) // Keep enough for RSI calculation
-                
+
                 // Calculate and store RSI
                 if (history.size >= cfg.period) {
                     val rsiValue = rsi(history, cfg.period)
@@ -440,7 +442,7 @@ class RsiBasedTradingStrategy(
                         val rsiHistory = rsiValues.getOrPut(mint) { mutableListOf() }
                         rsiHistory.add(rsiValue)
                         if (rsiHistory.size > 50) rsiHistory.removeAt(0)
-                        
+
                         // Log RSI value for monitoring
                         log.debug("📊 RSI UPDATE: $mint = ${"%.2f".format(rsiValue)} (price: ${"%.6f".format(currentPrice)}, history: ${history.size})")
                     }
@@ -451,28 +453,28 @@ class RsiBasedTradingStrategy(
             if (tokenInfo != null && status?.state == TokenState.Swapped) {
                 val balance = tokenInfo.tokenAmount.uiAmount
                 log.info("💸 RSI SELL CHECK: $mint (balance: $balance)")
-                
+
                 val tokenAge = now - (status.createdAt ?: 0)
-                
+
                 var shouldSell = false
                 var sellReason = ""
-                
+
                 // Calculate current RSI
                 val currentRsi = if (history.size >= cfg.period) {
                     rsi(history, cfg.period)
                 } else null
-                
+
                 log.info("📊 RSI ANALYSIS: $mint - Value: ${currentRsi?.let { "%.2f".format(it) } ?: "null"}, Price: ${"%.6f".format(currentPrice)}, History: ${history.size} prices")
-                
+
                 if (currentRsi != null) {
-                    
+
                     // Condition 1: Sell when RSI is overbought (above 70)
                     if (currentRsi >= cfg.overboughtThreshold) {
                         shouldSell = true
                         sellReason = "RSI overbought (${"%.2f".format(currentRsi)} >= ${cfg.overboughtThreshold})"
                         log.info("🔥 RSI OVERBOUGHT SIGNAL: $mint - Current RSI: ${"%.2f".format(currentRsi)}, Threshold: ${cfg.overboughtThreshold}, Price: ${"%.6f".format(currentPrice)}")
                     }
-                    
+
                     // Condition 2: Sell on RSI divergence (price up but RSI down)
                     else if (history.size >= 2 && currentPrice > 0.0) {
                         val rsiHistory = rsiValues[mint]
@@ -481,7 +483,7 @@ class RsiBasedTradingStrategy(
                             val previousPrice = history[history.size - 2]
                             val priceChange = (currentPrice - previousPrice) / previousPrice
                             val rsiChange = currentRsi - previousRsi
-                            
+
                             // Bearish divergence: price up but RSI down
                             if (priceChange > 0.01 && rsiChange < -2) {
                                 shouldSell = true
@@ -490,7 +492,7 @@ class RsiBasedTradingStrategy(
                             }
                         }
                     }
-                    
+
                     // Condition 3: Take profit when RSI crosses back above 50 from below
                     else if (currentRsi > 50) {
                         val rsiHistory = rsiValues[mint]
@@ -504,9 +506,9 @@ class RsiBasedTradingStrategy(
                         }
                     }
                 }
-                
+
                 // NO FALLBACK SELLS - No time-based selling, only RSI signals
-                
+
                 // Execute sell if triggered by RSI signal
                 if (shouldSell) {
                     log.info("🔥 RSI SELL EXECUTED: $mint - Reason: $sellReason, Balance: $balance")
@@ -523,29 +525,29 @@ class RsiBasedTradingStrategy(
         // TIMED SELLS DISABLED - No automatic selling
         // All sells must be triggered manually through the API
         plannedSells.clear() // Clear any planned sells
-        
+
         // FORCE SELLS DISABLED - No automatic selling based on hold time
         // All sells must be triggered manually through the API
-        
+
         log.info("📊 RSI STRATEGY SUMMARY: ${plannedSells.size} planned sells, ${walletMints.size} wallet tokens, ${rsiValues.size} RSI tracked, ${priceHistory.size} price histories")
     }
-    
+
     /**
      * Load initial price history for better RSI calculation
      */
     private suspend fun loadInitialPriceHistory(mint: String, runtime: TradingRuntime) {
         try {
             log.info("📊 RSI PRICE LOAD: Attempting to load history for $mint")
-            
+
             // Try to get historical prices from runtime or external source
             val historicalPrices = runtime.getPriceHistory?.invoke(mint)
             if (historicalPrices != null && historicalPrices.isNotEmpty()) {
                 val history = priceHistory.getOrPut(mint) { mutableListOf() }
                 val pricesToAdd = historicalPrices.takeLast(cfg.period * 2)
                 history.addAll(pricesToAdd)
-                
+
                 log.info("✅ RSI PRICE HISTORY LOADED: $mint - Total: ${historicalPrices.size}, Added: ${pricesToAdd.size}, Range: ${pricesToAdd.minOrNull()?.let { "%.6f".format(it) }} to ${pricesToAdd.maxOrNull()?.let { "%.6f".format(it) }}")
-                
+
                 // Calculate initial RSI if we have enough data
                 if (history.size >= cfg.period) {
                     val initialRsi = rsi(history, cfg.period)
@@ -878,47 +880,47 @@ class WalletSellOnlyStrategy(
 
     override suspend fun onTick(runtime: TradingRuntime) {
         val now = runtime.now()
-        
+
         // Update wallet universe to get all tokens currently in wallet
         updateWalletUniverse(runtime)
-        
+
         // Get all wallet tokens with positive balance
-        val walletTokens = runtime.allTokens().filter { 
+        val walletTokens = runtime.allTokens().filter {
             it.tokenAmount.uiAmount != null && it.tokenAmount.uiAmount > 0.0 &&
             !cfg.ignoreTokens.contains(it.address) // Skip ignored tokens like SOL, USDC, USDT
         }
-        
+
         log.info("💰 WalletSellOnly: Found ${walletTokens.size} wallet tokens to potentially sell")
-        
+
         // Collect all tokens that should be sold
         val tokensToSell = mutableListOf<Pair<String, String>>() // mint to reason
-        
+
         for (token in walletTokens) {
             val mint = token.address
             val balance = token.tokenAmount.uiAmount ?: 0.0
             val status = runtime.status(mint)
             val lastProcessed = processedTokens[mint] ?: 0L
-            
+
             // Skip if we just processed this token recently (within sellIntervalMs)
             if (now - lastProcessed < cfg.sellIntervalMs) {
                 continue
             }
-            
+
             log.info("🔍 Checking sell conditions for wallet token: $mint (balance: $balance)")
-            
+
             var shouldSell = false
             var sellReason = ""
-            
+
             // Condition 1: Token has been held for minimum time and we have status info
             if (status?.state == TokenState.Swapped) {
                 val tokenAge = now - (status.createdAt ?: 0)
-                
+
                 // Sell if held for minimum time
                 if (tokenAge >= cfg.minHoldTimeMs) {
                     shouldSell = true
                     sellReason = "Held for minimum time (${tokenAge}ms >= ${cfg.minHoldTimeMs}ms)"
                 }
-                
+
                 // Force sell if held too long
                 if (tokenAge >= cfg.maxHoldTimeMs) {
                     shouldSell = true
@@ -930,13 +932,13 @@ class WalletSellOnlyStrategy(
                 shouldSell = true
                 sellReason = "Unknown token in wallet - selling immediately"
             }
-            
+
             if (shouldSell) {
                 tokensToSell.add(mint to sellReason)
             } else {
                 // Mark as processed even if not selling to avoid checking too frequently
                 processedTokens[mint] = now
-                
+
                 val statusInfo = if (status != null) {
                     val age = now - (status.createdAt ?: 0)
                     "status: ${status.state}, age: ${age}ms"
@@ -946,16 +948,16 @@ class WalletSellOnlyStrategy(
                 log.debug("💎 Holding wallet token: $mint ($statusInfo)")
             }
         }
-        
+
         // Sell all tokens at once if any need to be sold
         if (tokensToSell.isNotEmpty()) {
             // Check global sell delay
             if (now - lastSellTime >= cfg.sellDelayBetweenTokensMs) {
                 log.info("🚀 SELL ALL AT ONCE - WalletSellOnly: Selling ${tokensToSell.size} tokens simultaneously")
-                
+
                 var successCount = 0
                 var failCount = 0
-                
+
                 // Execute all sells concurrently
                 tokensToSell.forEach { (mint, reason) ->
                     log.info("💸 SELL NOW - WalletSellOnly: $mint - $reason")
@@ -971,7 +973,7 @@ class WalletSellOnlyStrategy(
                         processedTokens[mint] = now
                     }
                 }
-                
+
                 lastSellTime = now
                 log.info("📈 SELL ALL COMPLETE - WalletSellOnly: ${successCount} succeeded, ${failCount} failed out of ${tokensToSell.size} total")
             } else {
@@ -980,14 +982,335 @@ class WalletSellOnlyStrategy(
                 // Don't mark as processed so we try again next tick
             }
         }
-        
+
         // Clean up old processed tokens entries (older than 1 hour)
         val oneHourAgo = now - 3600_000L
         processedTokens.entries.removeIf { it.value < oneHourAgo }
-        
+
         log.info("📊 WalletSellOnly: Processed ${walletTokens.size} wallet tokens, ${processedTokens.size} in tracking")
     }
 }
+
+class ShitcoinScalperStrategy(private val cfg: ShitcoinScalperConfig) :
+    BaseStrategy("ShitcoinScalperStrategy"), TradingStrategy {
+
+    override val type: StrategyType = StrategyType.SHITCOIN_SCALPER
+
+    private data class Position(
+        val buyPrice: Double,
+        val buyTime: Long,
+        var lastUpdate: Long,
+        var lastPrice: Double,
+        var peak: Double,
+        var trough: Double,
+        var trailingStopEnabled: Boolean = false,
+        var trailingStopPrice: Double? = null,
+        val priceHistory: MutableList<Double> = mutableListOf(),
+        var consolidationStartTime: Long? = null
+    )
+    private val positions = ConcurrentHashMap<String, Position>()
+
+    private val buyPrices = ConcurrentHashMap<String, Double>()
+    private val buyTimes = ConcurrentHashMap<String, Long>()
+    private val lastVolumeCheck = ConcurrentHashMap<String, Long>()
+    private val lastPrices = ConcurrentHashMap<String, Double>()
+    private val priceHistory = ConcurrentHashMap<String, MutableList<Double>>()
+
+    override suspend fun onDiscovered(meta: TokenMeta, runtime: TradingRuntime) {
+        if (cfg.onlyNewTokens && !runtime.isNew(meta.mint)) {
+            log.debug("SCALPER SKIP: ${meta.mint} - not a new token")
+            return
+        }
+        if (!runtime.isNew(meta.mint)) {
+            log.debug("SCALPER SKIP: ${meta.mint} - already processed")
+            return
+        }
+        updateWalletUniverse(runtime)
+        val currentPositions = runtime.allTokens().count {
+            it.tokenAmount.uiAmount != null && it.tokenAmount.uiAmount > 0.0 &&
+                runtime.status(it.address)?.state == TokenState.Swapped
+        }
+        if (currentPositions >= cfg.maxTokensHeld) {
+            log.info("🚫 SCALPER LIMIT: ${meta.mint} - max positions reached ($currentPositions/${cfg.maxTokensHeld})")
+            return
+        }
+        if (cfg.onlyPumpTokens && !isPumpToken(meta.mint)) {
+            log.debug("SCALPER SKIP: ${meta.mint} - not a pump token")
+            return
+        }
+        if (cfg.validatePools && isPumpToken(meta.mint)) {
+            val poolValid = validatePumpFunPool(meta.mint, runtime)
+            if (!poolValid) {
+                log.info("SCALPER SKIP: ${meta.mint} - pump token pool validation failed")
+                return
+            }
+        }
+        val currentPrice = try {
+            runtime.getTokenUsdPrice(meta.mint) ?: 0.000001
+        } catch (_: Exception) {
+            0.000001
+        }
+        log.info("🚀 SCALPER DISCOVERY: ${meta.mint} - New token buy (${currentPositions + 1}/${cfg.maxTokensHeld})")
+        val bought = runtime.buy(meta.mint)
+        if (bought) {
+            val now = runtime.now()
+            val position = Position(
+                buyPrice = currentPrice,
+                buyTime = now,
+                lastUpdate = now,
+                lastPrice = currentPrice,
+                peak = currentPrice,
+                trough = currentPrice
+            )
+            position.priceHistory.add(currentPrice)
+            positions[meta.mint] = position
+            
+            // Keep old maps for compatibility
+            buyPrices[meta.mint] = currentPrice
+            buyTimes[meta.mint] = now
+            lastVolumeCheck[meta.mint] = now
+            lastPrices[meta.mint] = currentPrice
+            priceHistory[meta.mint] = mutableListOf(currentPrice)
+            
+            log.info("✅ SCALPER BUY: ${meta.mint} - Price: ${"%.6f".format(currentPrice)} (Position ${currentPositions + 1}/${cfg.maxTokensHeld})")
+        } else {
+            log.error("❌ SCALPER BUY FAILED: ${meta.mint}")
+        }
+    }
+
+    override suspend fun onTick(runtime: TradingRuntime) {
+        val now = runtime.now()
+        updateWalletUniverse(runtime)
+        
+        val walletTokens = runtime.allTokens().filter {
+            it.tokenAmount.uiAmount != null && it.tokenAmount.uiAmount > 0.0
+        }
+        
+        for (token in walletTokens) {
+            val mint = token.address
+            val status = runtime.status(mint)
+            val position = positions[mint] ?: continue
+            
+            if (status?.state != TokenState.Swapped) continue
+            
+            val currentPrice = try { 
+                calculateTokenUsdPrice(token, runtime) 
+            } catch (_: Exception) { 
+                continue 
+            }
+            
+            // Update position data
+            position.lastUpdate = now
+            position.lastPrice = currentPrice
+            if (currentPrice > position.peak) position.peak = currentPrice
+            if (currentPrice < position.trough) position.trough = currentPrice
+            
+            // Add to price history (keep last N points for trend analysis)
+            position.priceHistory.add(currentPrice)
+            if (position.priceHistory.size > cfg.trendAnalysisWindow * 2) {
+                position.priceHistory.removeAt(0)
+            }
+            
+            val holdTime = now - position.buyTime
+            val profitPercent = (currentPrice - position.buyPrice) / position.buyPrice
+            
+            // Check various sell conditions
+            val sellDecision = analyzeExitConditions(position, currentPrice, profitPercent, holdTime, now)
+            
+            if (sellDecision != null) {
+                sellPosition(runtime, mint, sellDecision, profitPercent, holdTime)
+                continue
+            }
+            
+            log.debug("👀 SCALPER MONITOR: $mint - Profit: ${"%.1f".format(profitPercent * 100)}%, Hold: ${holdTime}ms, Trend: ${analyzeTrend(position)}")
+        }
+    }
+
+    /**
+     * Analyzes various exit conditions and returns reason if should sell
+     */
+    private fun analyzeExitConditions(
+        position: Position, 
+        currentPrice: Double, 
+        profitPercent: Double, 
+        holdTime: Long, 
+        now: Long
+    ): String? {
+        
+        // 1. Emergency stop loss - prevent major disasters
+        if (profitPercent <= -cfg.emergencyStopLoss) {
+            return "emergency_stop_${"%.1f".format(profitPercent * 100)}%"
+        }
+        
+        // 2. Regular stop loss - but only if we're in a clear downtrend
+        if (profitPercent <= -cfg.stopLossPercent) {
+            val trend = analyzeTrend(position)
+            if (trend == "down" || trend == "steep_down") {
+                return "stop_loss_downtrend_${"%.1f".format(profitPercent * 100)}%"
+            }
+        }
+        
+        // 3. Profit taking - immediate exit if we hit target
+        if (profitPercent >= cfg.profitTakePercent) {
+            return "profit_target_${"%.1f".format(profitPercent * 100)}%"
+        }
+        
+        // 4. Enable trailing stop after minimum profit
+        if (!position.trailingStopEnabled && profitPercent >= cfg.minProfitBeforeTrailing) {
+            position.trailingStopEnabled = true
+            position.trailingStopPrice = position.peak * (1.0 - cfg.trailingStopPercent)
+            log.info("📈 TRAILING STOP ENABLED: ${position.trailingStopPrice?.let { "%.6f".format(it) }} for profit ${"%.1f".format(profitPercent * 100)}%")
+        }
+        
+        // 5. Trailing stop exit
+        if (position.trailingStopEnabled && position.trailingStopPrice != null) {
+            // Update trailing stop to follow peak
+            val newTrailingStop = position.peak * (1.0 - cfg.trailingStopPercent)
+            if (newTrailingStop > position.trailingStopPrice!!) {
+                position.trailingStopPrice = newTrailingStop
+            }
+            
+            if (currentPrice <= position.trailingStopPrice!!) {
+                return "trailing_stop_${"%.1f".format(profitPercent * 100)}%"
+            }
+        }
+        
+        // 6. Consolidation exit - if price is flat for too long
+        val isConsolidating = isInConsolidation(position, currentPrice)
+        if (isConsolidating) {
+            if (position.consolidationStartTime == null) {
+                position.consolidationStartTime = now
+            } else if (now - position.consolidationStartTime!! >= cfg.consolidationTimeMs) {
+                return "consolidation_exit_${"%.1f".format(profitPercent * 100)}%"
+            }
+        } else {
+            position.consolidationStartTime = null
+        }
+        
+        // 7. Time-based exit only if losing money
+        if (holdTime >= cfg.maxHoldTimeMs && profitPercent < 0) {
+            return "max_time_loss_${"%.1f".format(profitPercent * 100)}%"
+        }
+        
+        // 8. Trend reversal exit - if strong uptrend turns to downtrend
+        val trend = analyzeTrend(position)
+        if (trend == "steep_down" && profitPercent > cfg.minProfitBeforeTrailing) {
+            return "trend_reversal_${"%.1f".format(profitPercent * 100)}%"
+        }
+        
+        return null // No exit condition met
+    }
+    
+    /**
+     * Analyzes price trend based on recent history
+     */
+    private fun analyzeTrend(position: Position): String {
+        val history = position.priceHistory
+        if (history.size < cfg.trendAnalysisWindow) return "insufficient_data"
+        
+        val recent = history.takeLast(cfg.trendAnalysisWindow)
+        val first = recent.first()
+        val last = recent.last()
+        val change = (last - first) / first
+        
+        // Calculate average change per step
+        var totalChange = 0.0
+        for (i in 1 until recent.size) {
+            totalChange += (recent[i] - recent[i-1]) / recent[i-1]
+        }
+        val avgChange = totalChange / (recent.size - 1)
+        
+        return when {
+            avgChange > 0.01 -> "steep_up"
+            avgChange > 0.003 -> "up"
+            avgChange > -0.003 -> "flat"
+            avgChange > -0.01 -> "down"
+            else -> "steep_down"
+        }
+    }
+    
+    /**
+     * Checks if price is in consolidation (sideways movement)
+     */
+    private fun isInConsolidation(position: Position, currentPrice: Double): Boolean {
+        val history = position.priceHistory
+        if (history.size < cfg.trendAnalysisWindow) return false
+        
+        val recent = history.takeLast(cfg.trendAnalysisWindow)
+        val max = recent.maxOrNull() ?: return false
+        val min = recent.minOrNull() ?: return false
+        val range = (max - min) / min
+        
+        return range <= cfg.consolidationThreshold
+    }
+    
+    /**
+     * Executes the sell and cleans up position data
+     */
+    private suspend fun sellPosition(
+        runtime: TradingRuntime, 
+        mint: String, 
+        reason: String, 
+        profitPercent: Double, 
+        holdTime: Long
+    ) {
+        log.info("💸 SCALPER SELL: $mint - Reason: $reason, Profit: ${"%.1f".format(profitPercent * 100)}%, Hold: ${holdTime}ms")
+        
+        val success = runtime.sell(mint)
+        if (success) {
+            // Clean up all position data
+            positions.remove(mint)
+            buyPrices.remove(mint)
+            buyTimes.remove(mint)
+            lastVolumeCheck.remove(mint)
+            lastPrices.remove(mint)
+            priceHistory.remove(mint)
+            
+            log.info("✅ SCALPER SOLD: $mint - Final profit: ${"%.1f".format(profitPercent * 100)}%")
+        } else {
+            log.warn("❌ SCALPER SELL FAILED: $mint")
+        }
+    }
+
+    private fun isPumpToken(mint: String): Boolean {
+        return mint.length in 32..44 &&
+            mint.matches(Regex("[1-9A-HJ-NP-Za-km-z]+")) &&
+            !mint.startsWith("So1111") &&
+            !mint.startsWith("EPjFWdd") &&
+            !mint.startsWith("Es9vMF")
+    }
+
+    private suspend fun validatePumpFunPool(mint: String, runtime: TradingRuntime): Boolean {
+        return try {
+            val tokenInfo = runtime.tokenInfo(mint)
+            if (tokenInfo != null) {
+                log.info("✅ POOL CHECK: $mint - token info available, allowing trade")
+                true
+            } else {
+                val price = runtime.getTokenUsdPrice(mint)
+                if (price != null && price > 0.0) {
+                    log.info("✅ POOL CHECK: $mint - price available (${"%.6f".format(price)}), allowing trade")
+                    true
+                } else if (runtime.config.priceService.allowBuyWithoutPrice) {
+                    log.info("✅ POOL CHECK: $mint - allowing new pump token (no price data yet)")
+                    true
+                } else {
+                    log.info("❌ POOL CHECK: $mint - no token info or price data available")
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            log.warn("❌ POOL CHECK: $mint - validation error: ${e.message}")
+            if (runtime.config.priceService.allowBuyWithoutPrice) {
+                log.info("✅ POOL CHECK: $mint - allowing despite error (permissive mode)")
+                true
+            } else {
+                false
+            }
+        }
+    }
+}
+
 
 /**
  * Helper function to calculate USD price for a token using real market data.

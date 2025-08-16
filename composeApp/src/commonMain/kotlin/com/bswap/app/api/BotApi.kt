@@ -7,7 +7,7 @@ import io.ktor.client.request.*
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 
-class BotApi(private val client: HttpClient, private val baseUrl: String = "http://localhost:9090") {
+class BotApi(private val client: HttpClient, private val baseUrl: String = "http://192.168.0.152:9090") {
     
     suspend fun getBotStatus(): ApiResponse<BotStatus> {
         return client.get("$baseUrl/bot/status").body()

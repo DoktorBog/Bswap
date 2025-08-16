@@ -36,16 +36,28 @@ class PoolMonitorService(private val client: HttpClient) {
 
                 synchronized(newPools) {
                     newPools.addAll(detectedPools)
+                    // Limit memory usage by clearing old pools
+                    if (newPools.size > 1000) {
+                        val toRemove = newPools.take(500)
+                        newPools.removeAll(toRemove.toSet())
+                    }
                 }
 
                 detectedPools.forEach { pool ->
                     knownPools.add(pool.id)
                     logger.info("New pool detected: ID=${pool.id}, Name=${pool.name}, Price=${pool.price}, TVL=${pool.tvl}, TokenA=${pool.mintA.symbol}, TokenB=${pool.mintB.symbol}")
                 }
+                
+                // Limit knownPools size to prevent memory leaks
+                if (knownPools.size > 5000) {
+                    val toRemove = knownPools.take(2500)
+                    knownPools.removeAll(toRemove.toSet())
+                }
 
-                delay(30_000) // Monitor every 60 seconds
+                delay(30_000) // Monitor every 30 seconds
             } catch (e: Exception) {
                 logger.error("Error during pool monitoring: ${e.message}", e)
+                delay(5_000) // Wait before retry on error
             }
         }
     }

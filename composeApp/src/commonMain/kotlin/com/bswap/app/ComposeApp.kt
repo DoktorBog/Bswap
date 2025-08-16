@@ -19,9 +19,9 @@ import org.koin.compose.KoinApplicationPreview
 @Composable
 fun ComposeApp(backStack: SnapshotStateList<NavKey> = rememberBackStack()) {
     LaunchedEffect(Unit) {
-        // Auto-navigate to bot dashboard if starting fresh
+        // Skip wallet setup since server handles it, go directly to dashboard
         if (backStack.firstOrNull() == NavKey.Welcome) {
-            // Start at welcome screen, user can choose to proceed to bot dashboard
+            backStack.replaceAll(NavKey.BotDashboard)
         }
     }
     WalletTheme {

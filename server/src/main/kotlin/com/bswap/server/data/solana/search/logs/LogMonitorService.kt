@@ -39,13 +39,23 @@ class LogMonitorService(private val client: HttpClient) {
                             is Certificate -> {
                                synchronized(newCertificates) {
                                    newCertificates.add(event)
+                                   // Limit memory usage by clearing old certificates
+                                   if (newCertificates.size > 1000) {
+                                       val toRemove = newCertificates.take(500)
+                                       newCertificates.removeAll(toRemove.toSet())
+                                   }
                                }
                                 logger.info("New certificate detected: ID=${event.id}, Owner=${event.owner}")
                             }
                             is LogPool -> {
-                                //synchronized(newPools) {
-                                //    newPools.add(event)
-                                //}
+                                synchronized(newPools) {
+                                    newPools.add(event)
+                                    // Limit memory usage by clearing old pools
+                                    if (newPools.size > 1000) {
+                                        val toRemove = newPools.take(500)
+                                        newPools.removeAll(toRemove.toSet())
+                                    }
+                                }
                                 logger.info("New pool detected: ID=${event.id}, TokenA=${event.tokenA}, TokenB=${event.tokenB}")
                             }
                         }
@@ -55,6 +65,7 @@ class LogMonitorService(private val client: HttpClient) {
                 delay(30_000) // Monitor every 30 seconds
             } catch (e: Exception) {
                 logger.error("Error during log monitoring: ${e.message}", e)
+                delay(5_000) // Wait before retry on error
             }
         }
     }
